@@ -380,7 +380,7 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
       <div class="wz-nav">
         <button class="btn ghost" id="wzBack">Terug</button>
         <button class="btn go" id="wzNext">Volgende</button>
-        <button class="btn go" id="wzStart" hidden>Start je eerste sessie</button>
+        <button class="btn go" id="wzStart" hidden>Naar de app</button>
         <span class="sp"></span>
         <button class="btn-link" id="wzSkip">Overslaan</button>
       </div>
@@ -495,10 +495,17 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
       <p class="eyebrow">Voortgang</p>
       <h2>Je tekens</h2>
       <p class="mile" id="pMile"></p>
+      <p class="eyebrow" style="margin-top:16px">Fase 1: het alfabet</p>
       <div class="chars" id="chars"></div>
       <p class="eyebrow" style="margin-top:16px">Fase 2: cijfers, leestekens en prosigns</p>
       <div class="chars" id="chars2"></div>
       <p class="small" style="margin-top:12px">Percentage = juist over de laatste 50 keer dat het teken klonk. Zwak is onder 85%.</p>
+    </div>
+    <div class="card" style="margin-top:18px">
+      <p class="eyebrow">Fase 3</p>
+      <h2>Klaar voor de band</h2>
+      <p class="mile" id="f3Mile"></p>
+      <p class="small" style="margin-top:12px">De Eindproef duurt 5 minuten, met groepen uit alle 44 tekens. Je slaagt met minstens 90% juist en geen enkel zwak teken. Slaag je twee keer op verschillende dagen, dan ben je klaar voor de band.</p>
     </div>
     <div class="card" id="vocCard" style="margin-top:18px">
       <p class="eyebrow">Fase 4</p>
@@ -568,6 +575,7 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
         <div class="field"><label for="cwpm">Tekensnelheid <output id="o-cwpm"></output></label><input type="range" id="cwpm" min="15" max="35" step="1"><small id="cwarn">Onder 20 WPM verdwijnt het muziekje van een teken.</small></div>
         <div class="field"><label for="ramp">Flank <output id="o-ramp"></output></label><input type="range" id="ramp" min="2" max="10" step="1"></div>
         <div class="field"><label for="order">Leervolgorde</label><select id="order"><option value="koch">Koch (standaard)</option><option value="fam">Per familie</option></select><small>Koch: een teken per keer erbij, zodra je 90% haalt. Per familie: telkens 4 tot 10 tekens die bij elkaar horen, een andere aanpak om het alfabet snel te kennen.</small><small id="orderMsg" class="ok"></small></div>
+        <div class="field"><label for="round">Oefenrondes</label><select id="round"><option value="1">8 rondes van 1 minuut</option><option value="2">4 rondes van 2 minuten</option></select></div>
         <div class="field"><label for="glen">Groeplengte</label><select id="glen"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></div>
         <label class="check"><input type="checkbox" id="wake"> Scherm aan houden tijdens een sessie</label>
         <label class="check"><input type="checkbox" id="dd"> Di-dah tonen bij een nieuw teken (om mee te zeggen)</label>
@@ -1048,7 +1056,7 @@ function delLog(P, id) {
 /* ============================================================
    TAAL
    ============================================================ */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.3';
 let LANG = 'nl';
 function tx(t) { if (LANG === 'nl' || t == null) return t; const d = TR[LANG]; return d && d[t] != null ? d[t] : t; }
 const mean = w => tx(MEANING[w] || '');
@@ -1076,7 +1084,7 @@ function translateDom() {
     el.setAttribute(a, tx(el.getAttribute(key)));
   }));
 }
-function detectLang() { const l = (navigator.language || 'nl').toLowerCase(); return l.startsWith('fr') ? 'fr' : l.startsWith('nl') ? 'nl' : 'en'; }
+function detectLang() { const l = String((navigator.languages && navigator.languages[0]) || navigator.language || 'en').toLowerCase(); return l.startsWith('fr') ? 'fr' : l.startsWith('nl') ? 'nl' : 'en'; }
 function setLang(l, rerender) {
   LANG = TR[l] || l === 'nl' ? l : 'nl';
   document.documentElement.lang = LANG;
@@ -1089,7 +1097,7 @@ function setLang(l, rerender) {
    ============================================================ */
 const $ = id => document.getElementById(id);
 const LS_P = 'cwt-progress-v1', LS_S = 'cwt-settings-v1';
-const DEF_S = {sv:2, freq:600, vol:70, cwpm:20, ramp:5, glen:5, wake:false, test:false, mode:'onderweg', pgroups:10, plen:5, pcheck:'snel', speech:true, live:true, dd:true, skipIntro:false, band:1};
+const DEF_S = {sv:2, freq:600, vol:70, cwpm:20, ramp:5, glen:5, wake:false, test:false, mode:'onderweg', pgroups:10, plen:5, pcheck:'snel', speech:true, live:true, dd:true, skipIntro:false, round:'1', band:1};
 let S = {...DEF_S}, P = newProgress();
 function load() {
   let raw = null;
@@ -1474,7 +1482,7 @@ let blockTimer = 0;
 function blockTitle(label) { return sess && sess.bn > 1 && sess.bi ? tx('Blok ') + sess.bi + tx(' van ') + sess.bn + ' \u00b7 ' + label : label; }
 function showTotal(blockLeft) {
   if (!sess || !sess.blocks || sess.bn < 2) { $('sTotal').textContent = ''; return; }
-  let t = blockLeft; for (let i = sess.bi; i < sess.blocks.length; i++) t += sess.blocks[i].secs;
+  let t = blockLeft + (sess.extra || 0); for (let i = sess.bi; i < sess.blocks.length; i++) t += sess.blocks[i].secs;
   $('sTotal').textContent = tx('Sessie: nog ongeveer ') + Math.max(1, Math.ceil(t / 60)) + tx(' min te gaan');
 }
 function startBlockTimer(secs) {
@@ -1545,6 +1553,29 @@ async function groupsBlock(label, secs, scored, gen, ew) {
   const t0 = startBlockTimer(secs);
   while (!sess.abort && (performance.now() - t0) / 1000 < secs) await runGroup(gen(), ew, scored);
   sess.minutes += (performance.now() - t0) / 60000;
+}
+/* Het scorende blok in korte rondes met een rustmoment ertussen */
+async function roundsBlock(label, total, scored, gen, ew) {
+  const rl = S.test ? 10 : (S.round === '2' ? 120 : 60);
+  const n = Math.max(1, Math.round(total / rl));
+  for (let r = 1; r <= n && !sess.abort; r++) {
+    sess.extra = (n - r) * rl;
+    await groupsBlock(label + ' \u00b7 ' + tx('ronde ') + r + tx(' van ') + n, rl, scored, gen, ew);
+    if (r < n && !sess.abort) await roundPause(r, n);
+  }
+  sess.extra = 0;
+}
+async function roundPause(r, n) {
+  clearInterval(blockTimer);
+  $('sBlock').textContent = tx('Pauze'); $('sTime').textContent = ''; $('sBar').style.width = '100%'; $('sScored').textContent = '';
+  showTotal(0);
+  $('brkDone').textContent = tx('Ronde ') + r + tx(' van ') + n + tx(' klaar');
+  $('brkNext').textContent = tx('Volgend: ronde ') + (r + 1);
+  const pct = sess.tokens ? Math.round(100 * sess.correct / sess.tokens) : 0;
+  $('brkInfo').textContent = tx('Tot nu toe ') + pct + tx('% juist. Neem even rust. Jij bepaalt wanneer de volgende ronde start.');
+  panel('break'); setKb(false);
+  Engine.tick(true);
+  await waitClick('brkGo');
 }
 async function isleep(ms) { const t0 = performance.now(); while (performance.now() - t0 < ms && sess && !sess.abort && !sess.skipI) await sleep(Math.min(100, ms)); }
 async function introChar(c, ew) {
@@ -1640,7 +1671,10 @@ async function runSession(exam) {
   const ew = Math.max(floor, Math.min(P.ewpm + plan.ewpmAdj, S.cwpm));
   const warmEw = Math.max(floor, ew - 2);
   plan.hadIntro = news.length > 0;
-  sess = {abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan, mode, release:null, paused:false, pausedMs:0, pauseAt:null, band:0, bandUsed:0};
+  /* Een nieuw teken: terug naar rondes van 1 minuut, en opnieuw 3 goede sessies nodig voor 2 minuten */
+  let roundDown = false;
+  if (news.length && mode !== 'luister') { if (S.round === '2') roundDown = true; S.round = '1'; saveS(); P.rgood = 0; saveP(); }
+  sess = {roundDown, abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan, mode, release:null, paused:false, pausedMs:0, pauseAt:null, band:0, bandUsed:0};
   kbState.chars = all; renderKb(); panel('play');
   const p4 = ph4();
   const lv = p4 ? (+S.band || 0) : 0;
@@ -1713,8 +1747,8 @@ async function runSession(exam) {
     if (!sess.abort && await begin('b3')) {
       sess.band = lv; if (lv) sess.bandUsed = lv;
       if (mode === 'papier') await paperBlocks(plan.b3, l => gen(l, true), ew);
-      else if (p4) await groupsBlock(tx('Op de band'), plan.b3, true, gen4, ew);
-      else await groupsBlock(tx('Groepen kopiëren'), plan.b3, true, () => gen(len, false), ew);
+      else if (p4) await roundsBlock(tx('Op de band'), plan.b3, true, gen4, ew);
+      else await roundsBlock(tx('Groepen kopiëren'), plan.b3, true, () => gen(len, false), ew);
     }
   }
   /* Blok 4: luisteren, 3 minuten, hoort bij elke sessie. Fase 4: stukjes QSO met bandcondities. */
@@ -1945,6 +1979,11 @@ function endSession() {
   const r = {tokens:sess.tokens, correct:sess.correct, perChar:sess.perChar, conf:sess.conf, vres:sess.vres || [], minutes:sess.minutes, ewpm:sess.ewpm, listen:sess.listenAcc || 0, band:sess.bandUsed || 0};
   const before = {ewpm:P.ewpm, known:P.known, okRun:P.okRun};
   const out = finishSession(P, r, sess.plan, today(), S.cwpm);
+  if (out.valid && sess.mode !== 'luister') {
+    P.rgood = out.score >= 0.95 ? (P.rgood || 0) + 1 : 0;
+    if (S.round !== '2' && P.rgood >= 3) { S.round = '2'; saveS(); out.roundUp = true; }
+  }
+  if (sess.roundDown) out.roundDown = true;
   saveP();
   showResult(r, out, before, sess.plan, sess.mode);
   sess = null;
@@ -1966,6 +2005,8 @@ function showResult(r, out, before, plan, mode) {
   else if (!out.valid) li.push(tx('Een sessie telt vanaf ') + plan.minTokens + tx(' tekens. Deze sessie wijzigt je niveau niet.'));
   else {
     if (out.unlocked && !out.alphabetDone) li.push('<b class="ok">' + (out.unlocked.length > 1 ? tx('Nieuwe tekens ontgrendeld.') : tx('Nieuw teken ontgrendeld.')) + '</b>' + (out.unlocked.length > 1 ? tx(' Je hoort ze in je volgende sessie.') : tx(' Je hoort het in je volgende sessie.')));
+    if (out.roundDown) li.push(tx('Er kwam een nieuw teken bij. Daarom oefen je weer in rondes van 1 minuut, tot je opnieuw drie goede sessies hebt.'));
+    if (out.roundUp) li.push(tx('Drie sessies op rij minstens 95%. Vanaf nu oefen je in 4 rondes van 2 minuten. Je kan dit terugzetten bij Instellingen.'));
     if (out.alphabetDone) li.push(tx('<b class="ok">Het hele alfabet is gekend.</b> Nu start fase 2 met cijfers, leestekens en prosigns.'));
     if (out.phase2Done) li.push(tx('<b class="ok">Alle 44 tekens zijn gekend.</b> De Eindproef staat klaar op het scherm Vandaag.'));
     if (out.vocabUnlocked) li.push(tx('<b class="ok">Nieuwe afkortingen ontgrendeld:</b> ') + out.vocabUnlocked.map(wordLab).join(', ') + tx('. Je hoort ze in je volgende sessie.'));
@@ -2042,6 +2083,10 @@ function renderProgress() {
     d.innerHTML = '<b>' + h(c) + '</b><span>' + (locked || a === null ? '&nbsp;' : Math.round(a * 100) + '%') + '</span>';
     (i < N1 ? el : el2).appendChild(d);
   });
+  const np = (P.exam && P.exam.passes) ? P.exam.passes.length : 0;
+  $('f3Mile').textContent = P.bandReady ? tx('Behaald op ') + fmtD(P.bandReady) + tx('. Nu geldt de gouden regel: heel veel luisteren.')
+    : P.known < KOCH.length ? tx('Nog vergrendeld. De Eindproef opent zodra alle 44 tekens gekend zijn. Nu gekend: ') + P.known + tx(' van ') + KOCH.length + '.'
+    : tx('De Eindproef staat klaar op het scherm Vandaag. Geslaagd: ') + Math.min(np, 2) + tx(' van 2 keer.');
   $('vocLock').hidden = ph4();
   $('vocTable').hidden = !ph4();
   $('vChips').innerHTML = VOCAB.map(v => '<span' + (knownVocab(P).includes(v.w) ? ' class="on"' : '') + '>' + [...v.w].map(h).join('') + '</span>').join('');
@@ -2121,7 +2166,7 @@ function renderSettings() {
   $('cwpm').value = S.cwpm; $('o-cwpm').textContent = S.cwpm + ' WPM';
   $('cwarn').className = S.cwpm < 20 ? 'warnc' : '';
   $('ramp').value = S.ramp; $('o-ramp').textContent = S.ramp + ' ms';
-  $('glen').value = S.glen; $('wake').checked = S.wake; $('test').checked = S.test; $('speech').checked = S.speech; $('live').checked = S.live; $('dd').checked = S.dd; $('skipIntro').checked = !!S.skipIntro;
+  $('glen').value = S.glen; $('round').value = S.round || '1'; $('wake').checked = S.wake; $('test').checked = S.test; $('speech').checked = S.speech; $('live').checked = S.live; $('dd').checked = S.dd; $('skipIntro').checked = !!S.skipIntro;
   $('fixed').checked = P.fixedSpeed;
   const ew = Math.min(P.ewpm, S.cwpm);
   $('ewpm').value = ew; $('ewpm').disabled = !P.fixedSpeed; $('o-ewpm').textContent = ew + ' WPM' + (P.fixedSpeed ? '' : tx(' (automatisch)'));
@@ -2143,6 +2188,7 @@ function renderSettings() {
   if (k === 'cwpm' && P.ewpm > S.cwpm) { P.ewpm = S.cwpm; saveP(); }
   renderSettings(); Engine.apply();
 }));
+$('round').addEventListener('change', e => { S.round = e.target.value; saveS(); });
 $('glen').addEventListener('change', e => { S.glen = +e.target.value; saveS(); });
 $('order').addEventListener('change', e => {
   switchOrder(P, e.target.value); saveP();
@@ -2221,10 +2267,9 @@ function renderWizard() {
   window.scrollTo(0, 0);
 }
 function wzOpen() { wzStep = 1; go('wizard'); }
-function wzDone(startNow) {
+function wzDone() {
   S.wizardDone = true; saveS();
   go('home');
-  if (startNow) runSession();
 }
 document.querySelectorAll('#wzLang .chip').forEach(b => b.addEventListener('click', () => { S.lang = b.dataset.l; saveS(); setLang(S.lang, false); renderWizard(); }));
 document.querySelectorAll('#wzPitch .chip').forEach(b => b.addEventListener('click', async () => {
@@ -2235,8 +2280,8 @@ $('wzVol').addEventListener('input', e => { S.vol = +e.target.value; $('wzVolO')
 $('wzTest').addEventListener('click', async () => { Engine.init(); Engine.apply(); await playP([['K', 'M', 'R', 'E']], Math.max(MIN_EWPM, Math.min(P.ewpm, S.cwpm))); });
 $('wzNext').addEventListener('click', () => { if (wzStep < 5) { wzStep++; renderWizard(); } });
 $('wzBack').addEventListener('click', () => { if (wzStep > 1) { wzStep--; renderWizard(); } });
-$('wzSkip').addEventListener('click', () => wzDone(false));
-$('wzStart').addEventListener('click', () => wzDone(true));
+$('wzSkip').addEventListener('click', wzDone);
+$('wzStart').addEventListener('click', wzDone);
 $('wizOpen').addEventListener('click', wzOpen);
 $('wzKnow').addEventListener('click', () => knOpen('wizard'));
 
