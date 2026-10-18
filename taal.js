@@ -1,4 +1,4 @@
-/* CWLD door ON3VZ, https://on3vz.github.io/cwld/ . Licentie CC BY-NC-SA 4.0, zie LICENSE.txt. */
+/* CWLD by ON3VZ, https://on3vz.github.io/CWLD/ . License CC BY-NC-SA 4.0, see LICENSE.txt. */
 /* TAAL:START */
 /* Taalbestand van CWLD. Sleutel = de Nederlandse tekst. Wie een vertaling wil verbeteren, past enkel dit blok aan. */
 const LANG_NAMES = {nl:'Nederlands', fr:'Français', en:'English'};

@@ -1,36 +1,36 @@
-CWLD: morse leren ontvangen
-Copyright (c) 2026 ON3VZ (https://on3vz.github.io/cwld/)
+CWLD: learn to receive Morse code
+Copyright (c) 2026 ON3VZ (https://on3vz.github.io/CWLD/)
 
-LICENTIE: Creative Commons Naamsvermelding-NietCommercieel-GelijkDelen 4.0 Internationaal
+LICENSE: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
 (CC BY-NC-SA 4.0)
 
-Volledige juridische tekst:
-  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode.nl
-Leesbare samenvatting:
-  https://creativecommons.org/licenses/by-nc-sa/4.0/deed.nl
+Full legal text:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+Human-readable summary:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-IN HET KORT (de juridische tekst gaat voor)
+IN SHORT (the legal text prevails)
 
-Je mag:
-  - CWLD gebruiken, kopieren en verspreiden;
-  - CWLD aanpassen en er nieuwe dingen op bouwen, bijvoorbeeld voor inspiratie.
+You may:
+  - use, copy and share CWLD;
+  - adapt CWLD and build on it, for example for inspiration.
 
-Onder deze voorwaarden:
-  1. Naamsvermelding. Je vermeldt duidelijk "CWLD door ON3VZ" met de link
-     https://on3vz.github.io/cwld/ , je geeft een link naar deze licentie en je
-     zegt of je iets gewijzigd hebt. Je mag dit niet doen op een manier die
-     suggereert dat ON3VZ jou of jouw gebruik goedkeurt.
-  2. Niet commercieel. Je mag CWLD of een bewerking ervan niet gebruiken om geld
-     mee te verdienen of voor commerciele doeleinden.
-  3. Gelijk delen. Deel je een bewerking, dan doe je dat onder dezelfde licentie
-     (CC BY-NC-SA 4.0), met dezelfde naamsvermelding.
+Under these terms:
+  1. Attribution. You give clear credit as "CWLD by ON3VZ" with the link
+     https://on3vz.github.io/CWLD/ , you link to this license and you
+     indicate whether you made changes. You may not do this in a way that
+     suggests ON3VZ endorses you or your use.
+  2. NonCommercial. You may not use CWLD or an adaptation of it to make money
+     or for commercial purposes.
+  3. ShareAlike. If you share an adaptation, you do so under the same license
+     (CC BY-NC-SA 4.0), with the same attribution.
 
-Je mag CWLD of delen ervan dus niet onder je eigen naam uitgeven.
+So you may not publish CWLD or parts of it under your own name.
 
-UITZONDERINGEN
-  - De lettertypes in de map fonts hebben hun eigen licentie (SIL Open Font
-    License). Die staat in de bestanden LICENSE-*.txt in die map en blijft gelden.
-  - De achtergrondafbeeldingen in de map img vallen onder dezelfde licentie als
-    de rest van CWLD.
+EXCEPTIONS
+  - The fonts in the fonts folder have their own license (SIL Open Font
+    License). It is in the LICENSE-*.txt files in that folder and remains in force.
+  - The background images in the img folder fall under the same license as
+    the rest of CWLD.
 
-Vragen of toestemming voor iets buiten deze licentie: neem contact op met ON3VZ.
+Questions, or permission for anything outside this license: contact ON3VZ.
