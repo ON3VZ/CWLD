@@ -1,0 +1,49 @@
+CWLD: morse leren ontvangen (Koch-methode, 15 minuten per dag)
+73 de ON3VZ
+
+INHOUD VAN DEZE MAP
+  index.html            de app
+  taal.js               alle teksten in het Nederlands, Frans en Engels
+  manifest.webmanifest  zorgt dat de app installeerbaar is
+  sw.js                 zorgt dat de app offline werkt
+  icons/                de pictogrammen
+  fonts/                de lettertypes (met hun licentie, SIL Open Font License)
+  LICENSE.txt           de licentie (CC BY-NC-SA 4.0, naamsvermelding CWLD door ON3VZ, niet commercieel)
+  LEESMIJ.txt           dit bestand (hoeft niet online)
+
+PUBLICEREN OP GITHUB PAGES (eenmalig)
+1. Ga naar github.com en meld je aan als on3vz.
+2. Klik rechtsboven op "+" en kies "New repository".
+3. Repository name: cwld. Kies "Public" (gratis GitHub Pages heeft dat nodig).
+   Vink "Add a README file" aan. Klik "Create repository".
+4. Klik in de nieuwe repo op "Add file" en dan "Upload files".
+5. Open deze map op je computer, selecteer ALLES behalve LEESMIJ.txt
+   (index.html, taal.js, manifest.webmanifest, sw.js, LICENSE.txt en de mappen icons, fonts en img)
+   en sleep het in het venster van GitHub. De mappen gaan mee als je ze mee sleept.
+   Controleer in de lijst dat je icons/..., fonts/... en img/... ziet staan.
+6. Onderaan: klik "Commit changes".
+7. Ga naar Settings, dan Pages (linkermenu). Bij "Build and deployment":
+   Source = "Deploy from a branch", Branch = main, map = / (root). Klik Save.
+8. Na 1 tot 2 minuten staat bovenaan die pagina de link:
+   https://on3vz.github.io/cwld/
+
+INSTALLEREN OP JE GSM
+Android (Chrome): open de link, tik op het menu (drie puntjes) en kies
+  "App installeren" of "Toevoegen aan startscherm".
+iPhone (Safari): open de link in Safari, tik op de knop Delen (vierkant met pijl)
+  en kies "Zet op beginscherm".
+Open de app daarna eenmaal met internet. Vanaf dan werkt ze ook offline.
+
+EEN NIEUWE VERSIE PLAATSEN
+Upload de nieuwe bestanden opnieuw via "Add file" en "Upload files"
+(zelfde namen: GitHub overschrijft ze). Wie de app open heeft, krijgt bovenaan
+de melding "Er is een nieuwe versie van CWLD" met een knop om te herladen.
+
+EEN VERTALING VERBETEREN
+Alle teksten staan in taal.js. Links staat telkens de Nederlandse tekst,
+rechts de vertaling. Pas enkel het rechterdeel aan.
+
+OPMERKING
+De voortgang staat enkel op het toestel zelf (in de browser). Gebruik
+Instellingen, Export om een reservekopie te maken of om naar een ander
+toestel te verhuizen.
