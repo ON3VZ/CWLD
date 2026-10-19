@@ -259,7 +259,8 @@ $('wzKnow').addEventListener('click', () => knOpen('wizard'));
 /* ============================================================
    CHOOSE LEVEL: what do you already know? With a short check.
    ============================================================ */
-let knN = 2, knFrom = 'settings';
+/* knClaim: the user tapped characters they know (also K and M alone); false after 'Nothing yet' */
+let knN = 2, knFrom = 'settings', knClaim = false;
 function snapLevel(n, up) {
   const b = bounds(P.order), lo = startKnown(P.order);
   n = Math.max(lo, Math.min(KOCH.length, n));
@@ -270,32 +271,33 @@ function snapLevel(n, up) {
 function applyLevel(n, next) {
   P.known = n; P.introQueue = []; P.okRun = 0;
   if (next && n < KOCH.length) { P.known = n + 1; P.introQueue = [KOCH[n]]; }
+  else if (!next && n <= startKnown(P.order)) P.introQueue = KOCH.slice(0, n).split('');   /* 'Nothing yet': start from the very beginning, first characters are introduced */
   n = P.known;
   P.alphabetDone = n > N1; P.phase2Done = n >= KOCH.length; P.bandReady = null;
   saveP(); renderHeader();
 }
 function nextTxt(n) { return n < KOCH.length ? ' ' + tx('Je eerste nieuwe teken in de volgende sessie is ') + lab(KOCH[n]) + '.' : ''; }
 function knOpen(from) {
-  knFrom = from; knN = snapLevel(Math.max(P.known, startKnown(P.order)), true);
+  knFrom = from; knN = snapLevel(Math.max(P.known, startKnown(P.order)), true); knClaim = knN > startKnown(P.order);
   $('knRes').hidden = true; $('knDone').hidden = true; $('knCheck').hidden = false; $('knNow').hidden = false;
   go('know');
 }
 function knSum() {
   const lo = startKnown(P.order);
-  $('knSum').textContent = knN <= lo ? tx('Je begint helemaal vooraan.') : tx('Gekozen niveau: ') + knN + tx(' tekens, tot en met ') + lab(KOCH[knN - 1]) + '.';
+  $('knSum').textContent = !knClaim ? tx('Je begint helemaal vooraan.') : tx('Gekozen niveau: ') + knN + tx(' tekens, tot en met ') + lab(KOCH[knN - 1]) + '.';
 }
 function renderKnow() {
   const g = $('knGrid'); g.innerHTML = '';
   KOCH.split('').forEach((c, i) => {
     const b = document.createElement('button');
     b.innerHTML = h(c); b.setAttribute('aria-label', lab(c));
-    b.className = i + 1 === knN ? 'on cur' : i < knN ? 'on' : '';
-    b.addEventListener('click', () => knSetN(i + 1));
+    b.className = !knClaim ? '' : i + 1 === knN ? 'on cur' : i < knN ? 'on' : '';
+    b.addEventListener('click', () => knSetN(i + 1, true));
     g.appendChild(b);
   });
   knSum();
 }
-function knSetN(n) { knN = snapLevel(n, true); $('knRes').hidden = true; $('knDone').hidden = true; $('knCheck').hidden = false; $('knNow').hidden = false; renderKnow(); }
+function knSetN(n, claim) { knN = snapLevel(n, true); knClaim = !!claim; $('knRes').hidden = true; $('knDone').hidden = true; $('knCheck').hidden = false; $('knNow').hidden = false; renderKnow(); }
 function knFinish() { if (knFrom === 'wizard') { wzStep = 5; go('wizard'); } else go('settings'); }
 function knApplied(msg) {
   const box = $('knRes'); box.hidden = false; box.textContent = msg;
@@ -340,11 +342,11 @@ function knEvaluate(n, s) {
   btn(tx('Toch mijn keuze houden'), () => { applyLevel(n); knApplied(tx('Niveau op ') + n + tx(' tekens gezet')); }, true);
   btn(tx('Nog eens proberen'), () => runPlacement(n), true);
 }
-$('knNone').addEventListener('click', () => knSetN(startKnown(P.order)));
-$('knAlpha').addEventListener('click', () => knSetN(N1));
-$('knAll').addEventListener('click', () => knSetN(KOCH.length));
+$('knNone').addEventListener('click', () => knSetN(startKnown(P.order), false));
+$('knAlpha').addEventListener('click', () => knSetN(N1, true));
+$('knAll').addEventListener('click', () => knSetN(KOCH.length, true));
 $('knCheck').addEventListener('click', () => runPlacement(knN));
-$('knNow').addEventListener('click', () => { const nx = knN > startKnown(P.order); applyLevel(knN, nx); knApplied(tx('Niveau op ') + knN + tx(' tekens gezet') + (nx ? nextTxt(knN) : '')); });
+$('knNow').addEventListener('click', () => { const nx = knClaim; applyLevel(knN, nx); knApplied(tx('Niveau op ') + knN + tx(' tekens gezet') + '.' + (nx ? nextTxt(knN) : '')); });
 $('knDone').addEventListener('click', knFinish);
 $('knBack').addEventListener('click', () => { if (knFrom === 'wizard') { wzStep = 4; go('wizard'); } else go('settings'); });
 $('knOpen').addEventListener('click', () => knOpen('settings'));
