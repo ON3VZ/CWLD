@@ -34,17 +34,29 @@ Progress is stored only on your own device, in the browser. Use Settings, Export
 
 ## Improving a translation
 
-All texts are in `taal.js`. The Dutch text is the key on the left, the translation is on the right. Only change the right-hand side.
+All texts are in `js/taal.js`. The Dutch text is the key on the left, the translation is on the right. Only change the right-hand side.
 
 ## Files
 
-- `index.html`: the app
-- `taal.js`: all texts in Dutch, French and English
+- `index.html`: the screens (markup only)
+- `css/cwld.css`: all styling
+- `js/taal.js`: French and English translations of every text
+- `js/data.js`: fixed content (learning orders, abbreviations and Q codes with meanings, words, QSO lines, band conditions)
+- `js/logic.js`: the learning rules (groups, scoring, unlocking, speed, streak), without screen or audio
+- `js/i18n.js`: language switching
+- `js/storage.js`: settings and progress, stored on the device
+- `js/audio.js`: the audio engine (Web Audio API, Farnsworth timing, band conditions)
+- `js/ui.js`: navigation, the Today screen and the on-screen keyboard
+- `js/session.js`: the daily session, free practice, final test, paper mode and listening
+- `js/views.js`: progress, logbook, settings, start wizard and level picker
+- `js/main.js`: start-up
+- `sw.js`: makes the app work offline (the cache name changes with every version)
 - `manifest.webmanifest`: makes the app installable
-- `sw.js`: makes the app work offline
 - `icons/`, `img/`: icons and start screen images
 - `fonts/`: fonts (SIL Open Font License)
 - `LICENSE.txt`: the license
+
+The scripts are plain files loaded in this order by `index.html`, without modules or a build tool, so the app also opens straight from disk. When you change a file, also change the cache name in `sw.js`, otherwise installed apps keep the old version.
 
 ## License
 
