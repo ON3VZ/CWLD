@@ -77,7 +77,7 @@ const Engine = (() => {
       const code = MORSE[pool[Math.floor(Math.random() * pool.length)]];
       [...code].forEach((el, ei) => {
         const d = el === '.' ? Q.dit : Q.dah;
-        qKey.gain.setValueCurveAtTime(UP, t, r); qKey.gain.setValueCurveAtTime(DN, t + d - r, r);
+        qKey.gain.setValueCurveAtTime(UP, t - r / 2, r); qKey.gain.setValueCurveAtTime(DN, t + d - r / 2, r);
         t += d; if (ei < code.length - 1) t += Q.u;
       });
       t += (++n % 5 === 0) ? Q.tw : Q.tc;
@@ -107,8 +107,9 @@ const Engine = (() => {
           const d = (el === '.' ? T.dit : T.dah) * J();
           const r = Math.min(r0, d / 2.2);
           if (B && B.chirp) { osc.frequency.setValueAtTime(f - B.chirp, t); osc.frequency.setTargetAtTime(f, t, 0.015); }
-          g.setValueCurveAtTime(UP, t, r);
-          g.setValueCurveAtTime(DN, t + d - r, r);
+          /* The edges are centred on the element boundaries: at half amplitude a dit lasts exactly one unit */
+          g.setValueCurveAtTime(UP, t - r / 2, r);
+          g.setValueCurveAtTime(DN, t + d - r / 2, r);
           t += d;
           if (ei < code.length - 1) t += T.u * J();
         });

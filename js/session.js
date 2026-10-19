@@ -190,7 +190,27 @@ async function introChar(c, ew) {
   $('introText').textContent = (INFO[c] ? tx('Dit is ') + tx(INFO[c]) : tx('Dit is de ') + c) + tx('. Zeg het ritme hardop mee.');
   await isleep(1000); if (sess.abort || sess.skipI) return;
   if (await playP([[c], [c], [c], [c], [c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
-  await isleep(800);
+  await introEnd([[c], [c], [c]], ew);
+}
+/* End of an introduction: the user decides when to go on, and can hear it again first */
+async function introEnd(again, ew) {
+  $('introText').textContent = tx('Klaar? Kies Verder om te oefenen, of hoor het nog eens.');
+  $('introNext').hidden = false; $('introSkip').hidden = true;
+  for (;;) {
+    const r = await new Promise(res => {
+      const a = $('introAgain'), g = $('introGo');
+      const done = v => { a.removeEventListener('click', ha); g.removeEventListener('click', hg); if (sess) sess.release = null; res(v); };
+      const ha = () => done('again'), hg = () => done('go');
+      a.addEventListener('click', ha); g.addEventListener('click', hg);
+      sess.release = () => done('stop');
+    });
+    if (r !== 'again' || sess.abort) break;
+    $('introAgain').disabled = true; $('introGo').disabled = true;
+    const pr = await playP(again, ew);
+    $('introAgain').disabled = false; $('introGo').disabled = false;
+    if (pr === 'stopped' || sess.abort) break;
+  }
+  $('introNext').hidden = true; $('introSkip').hidden = false;
 }
 
 /* Phase 4: introduce a new abbreviation. First only hear it, then see it with its meaning and say it along. */
@@ -205,7 +225,7 @@ async function introVocab(w, ew) {
   $('introText').textContent = wordLab(w) + ': ' + mean(w) + tx('. Zeg het hardop mee.');
   await isleep(1500); if (sess.abort || sess.skipI) return;
   if (await playP([t, t, t], ew) === 'stopped' || sess.abort || sess.skipI) return;
-  await isleep(800);
+  await introEnd([t, t], ew);
 }
 /* Phase 4, scoring block: abbreviations, call signs and mixed groups with all characters */
 function makeGen4(all, kv, rnd) {

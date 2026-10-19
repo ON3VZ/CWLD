@@ -504,7 +504,9 @@ const TR = {
 "Tekens op ": "Signes à ",
 " WPM, effectief ": " WPM, effectif ",
 "Vrij oefenen verandert je niveau en snelheid niet.": "L'exercice libre ne change ni ton niveau ni ta vitesse.",
-"Groepen met alle tekens die je kent. Je typt wat je hoort.": "Des groupes avec tous les signes que tu connais. Tu tapes ce que tu entends."
+"Groepen met alle tekens die je kent. Je typt wat je hoort.": "Des groupes avec tous les signes que tu connais. Tu tapes ce que tu entends.",
+"Nog eens horen": "Réécouter",
+"Klaar? Kies Verder om te oefenen, of hoor het nog eens.": "Prêt ? Choisis Continuer pour t'exercer, ou réécoute."
 },
 "en": {
 "REEKS": "STREAK",
@@ -1003,7 +1005,9 @@ const TR = {
 "Tekens op ": "Characters at ",
 " WPM, effectief ": " WPM, effective ",
 "Vrij oefenen verandert je niveau en snelheid niet.": "Free practice does not change your level or speed.",
-"Groepen met alle tekens die je kent. Je typt wat je hoort.": "Groups with all the characters you know. You type what you hear."
+"Groepen met alle tekens die je kent. Je typt wat je hoort.": "Groups with all the characters you know. You type what you hear.",
+"Nog eens horen": "Hear it again",
+"Klaar? Kies Verder om te oefenen, of hoor het nog eens.": "Ready? Choose Continue to practise, or hear it again."
 }
 };
 const SAYL = {"fr": {"0": "zéro", "1": "un", "2": "deux", "3": "trois", "4": "quatre", "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf", ".": "point", ",": "virgule", "?": "point d'interrogation", "/": "barre oblique", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}, "en": {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", ".": "full stop", ",": "comma", "?": "question mark", "/": "slash", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}};
