@@ -292,6 +292,29 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
         <span class="small" id="startHint"></span>
       </div>
     </div>
+    <div class="card" id="freeCard" hidden style="margin-top:18px">
+      <p class="eyebrow">Vrij oefenen</p>
+      <h2>Herhalen naar keuze</h2>
+      <p class="lead">Los van je dagelijkse sessie, om te onderhouden of te herhalen. Je niveau verandert niet. Je oefentijd telt wel mee voor je reeks.</p>
+      <p class="eyebrow" style="margin-top:4px">Wat</p>
+      <div class="modes" id="frKind" role="group" aria-label="Wat">
+        <button class="chip" data-v="mix">Alles door elkaar</button>
+        <button class="chip" data-v="words">Afkortingen en roepnamen</button>
+        <button class="chip" data-v="qso">QSO's</button>
+        <button class="chip" data-v="weak">Zwakke tekens</button>
+      </div>
+      <p class="small" id="frInfo"></p>
+      <p class="eyebrow" style="margin-top:4px">Hoe lang</p>
+      <div class="modes" id="frDur" role="group" aria-label="Hoe lang">
+        <button class="chip" data-v="5">5 min</button><button class="chip" data-v="10">10 min</button><button class="chip" data-v="15">15 min</button>
+      </div>
+      <p class="eyebrow" style="margin-top:4px">Tempo</p>
+      <div class="modes" id="frSpeed" role="group" aria-label="Tempo">
+        <button class="chip" data-v="me">Mijn tempo</button><button class="chip" data-v="up">Iets sneller</button><button class="chip" data-v="full">Volle snelheid</button>
+      </div>
+      <p class="small" id="frSpeedInfo"></p>
+      <div class="row"><button class="btn go" id="frStart">Start vrij oefenen</button></div>
+    </div>
     <div class="card" id="firstCard" hidden style="margin-top:18px">
       <p class="eyebrow">Eerste keer</p>
       <h2>Denk in toontjes</h2>
@@ -577,12 +600,12 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
       <h2>Toon en snelheid</h2>
       <div class="set">
         <div class="field"><label for="lang">Taal / Langue / Language</label><select id="lang"><option value="nl">Nederlands</option><option value="fr">Français</option><option value="en">English</option></select></div>
+        <div class="field" id="instSet" hidden><label>App installeren</label><button class="btn ghost" id="instSetGo">Installeren als app</button><p class="small" id="instSetMsg"></p></div>
         <div class="field"><label for="freq">Toonhoogte <output id="o-freq"></output></label><input type="range" id="freq" min="400" max="1000" step="10"></div>
         <div class="field"><label for="vol">Volume <output id="o-vol"></output></label><input type="range" id="vol" min="0" max="100" step="1"></div>
         <div class="field"><label for="cwpm">Tekensnelheid <output id="o-cwpm"></output></label><input type="range" id="cwpm" min="15" max="35" step="1"><small id="cwarn">Onder 20 WPM verdwijnt het muziekje van een teken.</small></div>
         <div class="field"><label for="ramp">Flank <output id="o-ramp"></output></label><input type="range" id="ramp" min="2" max="10" step="1"></div>
         <div class="field"><label for="order">Leervolgorde</label><select id="order"><option value="koch">Koch (standaard)</option><option value="fam">Per familie</option></select><small>Koch: een teken per keer erbij, zodra je 90% haalt. Per familie: telkens 4 tot 10 tekens die bij elkaar horen, een andere aanpak om het alfabet snel te kennen.</small><small id="orderMsg" class="ok"></small></div>
-        <div class="field" id="instSet" hidden><label>App installeren</label><button class="btn ghost" id="instSetGo">Installeren als app</button><p class="small" id="instSetMsg"></p></div>
         <div class="field"><label for="round">Oefenrondes</label><select id="round"><option value="1">8 rondes van 1 minuut</option><option value="2">4 rondes van 2 minuten</option></select></div>
         <div class="field"><label for="glen">Groeplengte</label><select id="glen"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></div>
         <label class="check"><input type="checkbox" id="wake"> Scherm aan houden tijdens een sessie</label>
@@ -1064,7 +1087,7 @@ function delLog(P, id) {
 /* ============================================================
    TAAL
    ============================================================ */
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.6';
 let LANG = 'nl';
 function tx(t) { if (LANG === 'nl' || t == null) return t; const d = TR[LANG]; return d && d[t] != null ? d[t] : t; }
 const mean = w => tx(MEANING[w] || '');
@@ -1343,7 +1366,7 @@ function renderHeader() {
 const ph4 = () => !!P.bandReady;
 const minTxt = m => { m = Math.round(m || 0); return Math.floor(m / 60) + tx(' u ') + (m % 60) + ' min'; };
 function renderHome() {
-  renderHeader(); renderInstall();
+  renderHeader(); renderInstall(); renderFree();
   const first = P.sessions.length === 0 && !P.lastDate;
   $('firstCard').hidden = !first;
   const min = P.days[today()] || 0;
@@ -1771,6 +1794,121 @@ async function runSession(exam) {
   endSession();
 }
 
+/* ---------- Vrij oefenen: herhalen en onderhouden, verandert niveau en snelheid niet ---------- */
+const freeAll = () => KOCH.slice(0, P.known).split('').filter(c => !P.introQueue.includes(c));
+const allKnown = () => P.known >= KOCH.length && !P.introQueue.length;
+function freeWords(all) {
+  const ks = new Set(all);
+  const v = allKnown() ? VOCAB.map(x => x.w) : knownVocab(P);
+  const w = availableWords(ks).filter(x => !VSET.has(x));
+  return {vocab:v.filter(x => [...x].every(c => ks.has(c))), words:w, calls:callsigns(ks, Math.random, 3).length > 0};
+}
+function freeAvail(k, all) {
+  if (all.length < 2) return false;
+  if (k === 'words') { const f = freeWords(all); return f.vocab.length + f.words.length >= 5 || f.calls; }
+  if (k === 'qso') return allKnown();
+  if (k === 'weak') return all.length >= 4;
+  return true;
+}
+function freeEw(sp) {
+  const floor = P.fixedSpeed ? MIN_EWPM : AUTO_MIN;
+  const e = sp === 'full' ? S.cwpm : sp === 'up' ? P.ewpm + 3 : P.ewpm;
+  return Math.max(floor, Math.min(e, S.cwpm));
+}
+const FREE_INFO = {mix:'Groepen met alle tekens die je kent, ook cijfers, leestekens en prosigns. Je typt wat je hoort.',
+  words:'Afkortingen, Q-codes, woorden en roepnamen, zoals op de band. Je typt wat je hoort; daarna zie je de betekenis.',
+  qso:"Stukjes QSO met bandcondities. Je luistert, zegt het in je hoofd en ziet daarna de tekst. Je hoeft niets te typen.",
+  weak:'Je zwakste tekens komen vaker, gemengd met de rest. Je typt wat je hoort.'};
+function renderFree() {
+  const all = freeAll();
+  $('freeCard').hidden = all.length < 2;
+  if ($('freeCard').hidden) return;
+  if (!S.frKind || !freeAvail(S.frKind, all)) S.frKind = 'mix';
+  if (!S.frDur) S.frDur = '10';
+  if (!S.frSpeed) S.frSpeed = 'me';
+  document.querySelectorAll('#frKind .chip').forEach(b => { b.disabled = !freeAvail(b.dataset.v, all); b.setAttribute('aria-pressed', String(b.dataset.v === S.frKind)); });
+  document.querySelectorAll('#frDur .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(S.frDur))));
+  document.querySelectorAll('#frSpeed .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.frSpeed)));
+  let info = tx(S.frKind === 'mix' && P.known <= N1 ? 'Groepen met alle tekens die je kent. Je typt wat je hoort.' : FREE_INFO[S.frKind]);
+  if (!allKnown()) info += ' ' + tx("QSO's worden beschikbaar zodra alle 44 tekens gekend zijn.");
+  $('frInfo').textContent = info;
+  $('frSpeedInfo').textContent = tx('Tekens op ') + S.cwpm + tx(' WPM, effectief ') + freeEw(S.frSpeed) + ' WPM.';
+}
+['frKind', 'frDur', 'frSpeed'].forEach(id => document.querySelectorAll('#' + id + ' .chip').forEach(b => b.addEventListener('click', () => {
+  if (b.disabled) return; S[id] = b.dataset.v; saveS(); renderFree();
+})));
+$('frStart').addEventListener('click', () => runFree());
+async function runFree() {
+  Engine.init();
+  const all = freeAll();
+  if (all.length < 2) { go('home'); return; }
+  const kind = freeAvail(S.frKind, all) ? S.frKind : 'mix';
+  const secs = S.test ? 30 : (+S.frDur || 10) * 60;
+  const ew = freeEw(S.frSpeed);
+  const rnd = Math.random, len = +S.glen;
+  const bandLv = (kind === 'qso' || kind === 'words') ? (+S.band || 0) : 0;
+  sess = {free:kind, abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan:{}, mode:'vrij',
+          release:null, paused:false, pausedMs:0, pauseAt:null, band:bandLv, bandUsed:bandLv};
+  kbState.chars = all; renderKb(); panel('play');
+  go('session'); $('stopBox').hidden = true; wake(S.wake);
+  const label = tx('Vrij oefenen') + ' \u00b7 ' + tx({mix:'Alles door elkaar', words:'Afkortingen en roepnamen', qso:"QSO's", weak:'Zwakke tekens'}[kind]);
+  if (kind === 'qso') {
+    const kv = VOCAB.map(x => x.w);
+    const lg = makeLineGen(all, kv, rnd);
+    await listenSession(secs, lg, ew);
+  } else {
+    let gen;
+    if (kind === 'words') {
+      const f = freeWords(all), ks = new Set(all), recent = [];
+      gen = () => {
+        const r = rnd();
+        if (f.vocab.length && r < 0.4) { let w, t = 0; do { w = f.vocab[Math.floor(rnd() * f.vocab.length)]; } while (recent.includes(w) && t++ < 10); recent.push(w); if (recent.length > 5) recent.shift(); return {tokens:[...w], word:w}; }
+        if (r < 0.7) { const c = callsigns(ks, rnd, 1)[0]; if (c) return {tokens:[...c], word:c}; }
+        if (f.words.length) { const w = f.words[Math.floor(rnd() * f.words.length)]; return {tokens:[...w], word:w}; }
+        return {tokens:randomGroup(P, all, len, rnd)};
+      };
+    } else if (kind === 'weak') {
+      const weak = weakest(P, all, 5);
+      gen = () => {
+        const g = [];
+        for (let i = 0; i < len; i++) g.push(rnd() < 0.6 ? weak[Math.floor(rnd() * weak.length)] : all[Math.floor(rnd() * all.length)]);
+        return {tokens:g};
+      };
+    } else gen = () => ({tokens:randomGroup(P, all, len, rnd)});
+    await roundsBlock(label, secs, true, gen, ew);
+  }
+  sess.band = 0;
+  clearInterval(blockTimer); wake(false); Engine.stop(true);
+  endSession();
+}
+function endFree() {
+  const r = {tokens:sess.tokens, correct:sess.correct, perChar:sess.perChar, conf:sess.conf, vres:sess.vres || [], minutes:sess.minutes, listen:sess.listenAcc || 0};
+  const d = today();
+  addStats(P, r);
+  P.days[d] = (P.days[d] || 0) + r.minutes;
+  P.listenMin = (P.listenMin || 0) + r.listen;
+  if (r.tokens > 0 || r.minutes > 0.5) P.lastDate = d;
+  saveP();
+  const kind = sess.free; sess = null;
+  lastExam = false; lastFree = true;
+  go('result');
+  const lis = kind === 'qso';
+  $('rMeter').hidden = lis || !r.tokens; $('rMeterLbl').hidden = lis || !r.tokens;
+  const pct = r.tokens ? Math.round(100 * r.correct / r.tokens) : 0;
+  $('rTitle').textContent = lis ? tx('Goed geluisterd') : tx('Vrij oefenen');
+  $('rScore').textContent = lis ? fmt(r.minutes, 0) + ' min' : r.tokens ? pct + '%' : '-';
+  $('rFill').style.width = pct + '%';
+  const li = [];
+  if (!lis) li.push(r.tokens ? r.correct + tx(' van ') + r.tokens + tx(' tekens juist.') : tx('Er werden geen groepen gekopieerd.'));
+  else li.push(tx('Dat telt mee voor je luistertijd en je reeks. Totale luistertijd: ') + listenTxt() + '.');
+  const miss = {}; r.perChar.forEach(([c, ok]) => { if (!ok) miss[c] = (miss[c] || 0) + 1; });
+  const top = Object.keys(miss).sort((a, b) => miss[b] - miss[a]).slice(0, 3);
+  if (top.length) li.push(tx('Meeste fouten bij: ') + top.map(lab).join(', ') + tx('. Die komen vaker terug.'));
+  li.push(tx('Vrij oefenen verandert je niveau en snelheid niet.'));
+  li.push(tx('Geoefend: ') + fmt(r.minutes, 0) + tx(' minuten') + (r.minutes < 10 && (P.days[d] || 0) < 10 ? tx(' (een dag telt vanaf 10 minuten)') : '') + '.');
+  $('rList').innerHTML = li.map(t => '<li>' + t + '</li>').join('');
+}
+
 /* ---------- Eindproef ---------- */
 async function runExam() {
   const all = KOCH.split('');
@@ -1979,6 +2117,7 @@ async function listenSession(secs, gen, ew, asBlock) {
 }
 
 function endSession() {
+  if (sess.free) { endFree(); return; }
   if (sess.exam) {
     const r = {tokens:sess.tokens, correct:sess.correct, perChar:sess.perChar, conf:sess.conf, minutes:sess.minutes};
     const out = finishExam(P, r, today(), sess.plan.minTokens);
@@ -1997,7 +2136,7 @@ function endSession() {
   sess = null;
 }
 function showResult(r, out, before, plan, mode) {
-  lastExam = false;
+  lastExam = false; lastFree = false;
   go('result');
   const lis = mode === 'luister';
   $('rMeter').hidden = lis; $('rMeterLbl').hidden = lis;
@@ -2033,9 +2172,9 @@ function showResult(r, out, before, plan, mode) {
   $('rList').innerHTML = li.map(t => '<li>' + t + '</li>').join('');
 }
 
-let lastExam = false;
+let lastExam = false, lastFree = false;
 function showExamResult(r, out, plan) {
-  lastExam = true;
+  lastExam = true; lastFree = false;
   go('result');
   $('rMeter').hidden = false; $('rMeterLbl').hidden = false;
   const pct = Math.round(out.score * 100);
@@ -2072,7 +2211,7 @@ $('stopYes').addEventListener('click', () => {
 async function afterAbortWatcher() {}
 $('start').addEventListener('click', () => { runSession(); });
 $('rHome').addEventListener('click', () => go('home'));
-$('rAgain').addEventListener('click', () => { runSession(lastExam); });
+$('rAgain').addEventListener('click', () => { if (lastFree) runFree(); else runSession(lastExam); });
 
 /* ============================================================
    VOORTGANG
@@ -2151,15 +2290,18 @@ function instHow() {
     : tx('Open het menu van je browser (drie puntjes) en kies "App installeren" of "Toevoegen aan startscherm".');
 }
 function renderInstall() {
-  const can = !isStandalone() && !S.installed;
-  const show = can && !S.instNever && Date.now() > (S.instUntil || 0) && P.sessions.length >= 1 && (instEvt || isIOS());
+  const can = !isStandalone();
+  const show = can && !S.installed && !S.instNever && Date.now() > (S.instUntil || 0);
   $('instCard').hidden = !show;
-  if (show) $('instTxt').textContent = instEvt ? tx('Zo start ze meteen vanaf je startscherm, in volledig scherm, en werkt ze ook zonder internet.') : instHow();
+  if (show) {
+    const t = $('instTxt'); t.textContent = tx('Zo start ze meteen vanaf je startscherm, in volledig scherm, en werkt ze ook zonder internet.');
+    if (!instEvt) { const p2 = document.createElement('span'); p2.style.display = 'block'; p2.style.marginTop = '10px'; p2.textContent = instHow(); t.appendChild(p2); }
+  }
   $('instGo').hidden = !instEvt;
   $('instSet').hidden = !can;
 }
 async function doInstall() {
-  if (instEvt) { const e = instEvt; instEvt = null; try { await e.prompt(); await e.userChoice; } catch (x) {} renderInstall(); return true; }
+  if (instEvt) { const e = instEvt; instEvt = null; try { await e.prompt(); const c = await e.userChoice; if (c && c.outcome === 'accepted') S.installed = true; else S.instUntil = Date.now() + 14 * 86400000; saveS(); } catch (x) {} renderInstall(); return true; }
   return false;
 }
 $('instGo').addEventListener('click', doInstall);
@@ -2194,7 +2336,7 @@ async function wake(on) {
   } catch (e) {}
 }
 function renderSettings() {
-  renderHeader();
+  renderHeader(); renderInstall(); $('instSetMsg').textContent = '';
   $('freq').value = S.freq; $('o-freq').textContent = S.freq + ' Hz';
   $('vol').value = S.vol; $('o-vol').textContent = S.vol + '%';
   $('cwpm').value = S.cwpm; $('o-cwpm').textContent = S.cwpm + ' WPM';
@@ -2336,11 +2478,15 @@ function snapLevel(n, up) {
   if (!b) return n;
   return up ? (b.find(x => x >= n) || KOCH.length) : ([...b].reverse().find(x => x <= n) || b[0]);
 }
-function applyLevel(n) {
+/* next = true: de gebruiker kent de tekens tot n (check gehaald of bewust gekozen), dus het eerstvolgende teken wordt meteen voorgesteld */
+function applyLevel(n, next) {
   P.known = n; P.introQueue = []; P.okRun = 0;
+  if (next && n < KOCH.length) { P.known = n + 1; P.introQueue = [KOCH[n]]; }
+  n = P.known;
   P.alphabetDone = n > N1; P.phase2Done = n >= KOCH.length; P.bandReady = null;
   saveP(); renderHeader();
 }
+function nextTxt(n) { return n < KOCH.length ? ' ' + tx('Je eerste nieuwe teken in de volgende sessie is ') + lab(KOCH[n]) + '.' : ''; }
 function knOpen(from) {
   knFrom = from; knN = snapLevel(Math.max(P.known, startKnown(P.order)), true);
   $('knRes').hidden = true; $('knDone').hidden = true; $('knCheck').hidden = false; $('knNow').hidden = false;
@@ -2392,8 +2538,8 @@ function knEvaluate(n, s) {
   }
   const acc = s.correct / s.tokens, pct = Math.round(acc * 100);
   if (acc >= 0.9) {
-    applyLevel(n);
-    knApplied(tx('Controle: ') + pct + tx('% juist. Je niveau staat nu op ') + n + tx(' tekens.'));
+    applyLevel(n, true);
+    knApplied(tx('Controle: ') + pct + tx('% juist. Je niveau staat nu op ') + n + tx(' tekens.') + nextTxt(n));
     return;
   }
   const st = {}; s.perChar.forEach(([c, ok]) => { const x = st[c] || (st[c] = [0, 0]); x[1]++; if (ok) x[0]++; });
@@ -2410,7 +2556,7 @@ $('knNone').addEventListener('click', () => knSetN(startKnown(P.order)));
 $('knAlpha').addEventListener('click', () => knSetN(N1));
 $('knAll').addEventListener('click', () => knSetN(KOCH.length));
 $('knCheck').addEventListener('click', () => runPlacement(knN));
-$('knNow').addEventListener('click', () => { applyLevel(knN); knApplied(tx('Niveau op ') + knN + tx(' tekens gezet')); });
+$('knNow').addEventListener('click', () => { const nx = knN > startKnown(P.order); applyLevel(knN, nx); knApplied(tx('Niveau op ') + knN + tx(' tekens gezet') + (nx ? nextTxt(knN) : '')); });
 $('knDone').addEventListener('click', knFinish);
 $('knBack').addEventListener('click', () => { if (knFrom === 'wizard') { wzStep = 4; go('wizard'); } else go('settings'); });
 $('knOpen').addEventListener('click', () => knOpen('settings'));
