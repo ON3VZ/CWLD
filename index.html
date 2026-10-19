@@ -244,6 +244,13 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
 
   <!-- VANDAAG -->
   <section id="v-home">
+    <div class="card" id="instCard" hidden style="margin-bottom:18px">
+      <p class="eyebrow">Installeren</p>
+      <h2>Zet CWLD als app op je toestel</h2>
+      <p class="lead" id="instTxt"></p>
+      <div class="row"><button class="btn go" id="instGo">Installeren als app</button><button class="btn ghost" id="instLater">Niet nu</button></div>
+      <p style="margin-top:10px"><button class="btn-link" id="instNever">Nooit meer vragen</button></p>
+    </div>
     <div class="card" id="p4Card" hidden style="margin-bottom:18px">
       <p class="eyebrow">Nieuw: fase 4</p>
       <h2>Welkom op de band</h2>
@@ -575,6 +582,7 @@ footer{color:var(--text3);font-size:13px;text-align:center;padding-block:0 32px}
         <div class="field"><label for="cwpm">Tekensnelheid <output id="o-cwpm"></output></label><input type="range" id="cwpm" min="15" max="35" step="1"><small id="cwarn">Onder 20 WPM verdwijnt het muziekje van een teken.</small></div>
         <div class="field"><label for="ramp">Flank <output id="o-ramp"></output></label><input type="range" id="ramp" min="2" max="10" step="1"></div>
         <div class="field"><label for="order">Leervolgorde</label><select id="order"><option value="koch">Koch (standaard)</option><option value="fam">Per familie</option></select><small>Koch: een teken per keer erbij, zodra je 90% haalt. Per familie: telkens 4 tot 10 tekens die bij elkaar horen, een andere aanpak om het alfabet snel te kennen.</small><small id="orderMsg" class="ok"></small></div>
+        <div class="field" id="instSet" hidden><label>App installeren</label><button class="btn ghost" id="instSetGo">Installeren als app</button><p class="small" id="instSetMsg"></p></div>
         <div class="field"><label for="round">Oefenrondes</label><select id="round"><option value="1">8 rondes van 1 minuut</option><option value="2">4 rondes van 2 minuten</option></select></div>
         <div class="field"><label for="glen">Groeplengte</label><select id="glen"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></div>
         <label class="check"><input type="checkbox" id="wake"> Scherm aan houden tijdens een sessie</label>
@@ -1056,7 +1064,7 @@ function delLog(P, id) {
 /* ============================================================
    TAAL
    ============================================================ */
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 let LANG = 'nl';
 function tx(t) { if (LANG === 'nl' || t == null) return t; const d = TR[LANG]; return d && d[t] != null ? d[t] : t; }
 const mean = w => tx(MEANING[w] || '');
@@ -1335,7 +1343,7 @@ function renderHeader() {
 const ph4 = () => !!P.bandReady;
 const minTxt = m => { m = Math.round(m || 0); return Math.floor(m / 60) + tx(' u ') + (m % 60) + ' min'; };
 function renderHome() {
-  renderHeader();
+  renderHeader(); renderInstall();
   const first = P.sessions.length === 0 && !P.lastDate;
   $('firstCard').hidden = !first;
   const min = P.days[today()] || 0;
@@ -2132,6 +2140,32 @@ $('aboutOpen').addEventListener('click', openAbout);
 $('aboutBack').addEventListener('click', () => go(aboutFrom));
 $('lang').addEventListener('change', e => { S.lang = e.target.value; saveS(); setLang(S.lang, true); });
 $('updGo').addEventListener('click', () => location.reload());
+/* Installeren als app: eigen kaartje na de eerste sessie, Android/computer via de browser, iPhone met uitleg */
+let instEvt = null;
+const isStandalone = () => { try { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) { return false; } };
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); instEvt = e; renderInstall(); });
+window.addEventListener('appinstalled', () => { instEvt = null; S.installed = true; saveS(); renderInstall(); });
+function instHow() {
+  return isIOS() ? tx('Tik onderaan op de knop Delen, kies "Zet op beginscherm" en tik rechtsboven op Voeg toe. Dit werkt in Safari.')
+    : tx('Open het menu van je browser (drie puntjes) en kies "App installeren" of "Toevoegen aan startscherm".');
+}
+function renderInstall() {
+  const can = !isStandalone() && !S.installed;
+  const show = can && !S.instNever && Date.now() > (S.instUntil || 0) && P.sessions.length >= 1 && (instEvt || isIOS());
+  $('instCard').hidden = !show;
+  if (show) $('instTxt').textContent = instEvt ? tx('Zo start ze meteen vanaf je startscherm, in volledig scherm, en werkt ze ook zonder internet.') : instHow();
+  $('instGo').hidden = !instEvt;
+  $('instSet').hidden = !can;
+}
+async function doInstall() {
+  if (instEvt) { const e = instEvt; instEvt = null; try { await e.prompt(); await e.userChoice; } catch (x) {} renderInstall(); return true; }
+  return false;
+}
+$('instGo').addEventListener('click', doInstall);
+$('instLater').addEventListener('click', () => { S.instUntil = Date.now() + 14 * 86400000; saveS(); renderInstall(); });
+$('instNever').addEventListener('click', () => { S.instNever = true; saveS(); renderInstall(); });
+$('instSetGo').addEventListener('click', async () => { if (!(await doInstall())) $('instSetMsg').textContent = instHow(); });
 /* Updatemelding: enkel als er al een versie actief was en de service worker een nieuwe neemt */
 try {
   if ('serviceWorker' in navigator) {

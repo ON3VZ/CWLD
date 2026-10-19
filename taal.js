@@ -471,7 +471,16 @@ const TR = {
 "Nog vergrendeld. De Eindproef opent zodra alle 44 tekens gekend zijn. Nu gekend: ": "Encore verrouillé. L'épreuve finale s'ouvre dès que les 44 signes sont connus. Connus maintenant : ",
 "De Eindproef staat klaar op het scherm Vandaag. Geslaagd: ": "L'épreuve finale est prête sur l'écran Aujourd'hui. Réussie : ",
 " van 2 keer.": " fois sur 2.",
-"Er kwam een nieuw teken bij. Daarom oefen je weer in rondes van 1 minuut, tot je opnieuw drie goede sessies hebt.": "Un nouveau signe s'est ajouté. Tu t'exerces donc de nouveau en tours de 1 minute, jusqu'à trois bonnes séances de plus."
+"Er kwam een nieuw teken bij. Daarom oefen je weer in rondes van 1 minuut, tot je opnieuw drie goede sessies hebt.": "Un nouveau signe s'est ajouté. Tu t'exerces donc de nouveau en tours de 1 minute, jusqu'à trois bonnes séances de plus.",
+"Installeren": "Installer",
+"Zet CWLD als app op je toestel": "Mets CWLD comme app sur ton appareil",
+"Installeren als app": "Installer comme app",
+"Niet nu": "Pas maintenant",
+"Nooit meer vragen": "Ne plus demander",
+"Zo start ze meteen vanaf je startscherm, in volledig scherm, en werkt ze ook zonder internet.": "Elle démarre ainsi directement depuis ton écran d'accueil, en plein écran, et fonctionne aussi sans internet.",
+"Tik onderaan op de knop Delen, kies \"Zet op beginscherm\" en tik rechtsboven op Voeg toe. Dit werkt in Safari.": "Touche en bas le bouton Partager, choisis « Sur l'écran d'accueil » et touche Ajouter en haut à droite. Cela fonctionne dans Safari.",
+"Open het menu van je browser (drie puntjes) en kies \"App installeren\" of \"Toevoegen aan startscherm\".": "Ouvre le menu de ton navigateur (trois points) et choisis « Installer l'application » ou « Ajouter à l'écran d'accueil ».",
+"App installeren": "Installer l'app"
 },
 "en": {
 "REEKS": "STREAK",
@@ -939,7 +948,16 @@ const TR = {
 "Nog vergrendeld. De Eindproef opent zodra alle 44 tekens gekend zijn. Nu gekend: ": "Still locked. The final test opens once all 44 characters are known. Known now: ",
 "De Eindproef staat klaar op het scherm Vandaag. Geslaagd: ": "The final test is ready on the Today screen. Passed: ",
 " van 2 keer.": " of 2 times.",
-"Er kwam een nieuw teken bij. Daarom oefen je weer in rondes van 1 minuut, tot je opnieuw drie goede sessies hebt.": "A new character was added. So you practise in rounds of 1 minute again, until you have three good sessions again."
+"Er kwam een nieuw teken bij. Daarom oefen je weer in rondes van 1 minuut, tot je opnieuw drie goede sessies hebt.": "A new character was added. So you practise in rounds of 1 minute again, until you have three good sessions again.",
+"Installeren": "Install",
+"Zet CWLD als app op je toestel": "Put CWLD on your device as an app",
+"Installeren als app": "Install as an app",
+"Niet nu": "Not now",
+"Nooit meer vragen": "Never ask again",
+"Zo start ze meteen vanaf je startscherm, in volledig scherm, en werkt ze ook zonder internet.": "This way it starts straight from your home screen, full screen, and also works without internet.",
+"Tik onderaan op de knop Delen, kies \"Zet op beginscherm\" en tik rechtsboven op Voeg toe. Dit werkt in Safari.": "Tap the Share button at the bottom, choose \"Add to Home Screen\" and tap Add at the top right. This works in Safari.",
+"Open het menu van je browser (drie puntjes) en kies \"App installeren\" of \"Toevoegen aan startscherm\".": "Open your browser menu (three dots) and choose \"Install app\" or \"Add to Home screen\".",
+"App installeren": "Install app"
 }
 };
 const SAYL = {"fr": {"0": "zéro", "1": "un", "2": "deux", "3": "trois", "4": "quatre", "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf", ".": "point", ",": "virgule", "?": "point d'interrogation", "/": "barre oblique", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}, "en": {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", ".": "full stop", ",": "comma", "?": "question mark", "/": "slash", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}};
