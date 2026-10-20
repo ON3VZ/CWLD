@@ -149,18 +149,37 @@ async function groupsBlock(label, secs, scored, gen, ew) {
   while (!sess.abort && (performance.now() - t0) / 1000 < secs) await runGroup(gen(), ew, scored);
   sess.minutes += (performance.now() - t0) / 60000;
 }
+/* Hear a character again (outside the copying itself): three times, clean signal, at the user's speed */
+function hearChar(c) {
+  if (!MORSE[c]) return;
+  Engine.init();
+  const ew = Math.max(MIN_EWPM, Math.min(P.ewpm, S.cwpm));
+  Engine.play([[c], [c], [c]], {c:S.cwpm, s:ew, ramp:S.ramp, band:null, freq:0}, () => {});
+}
+const hearBtns = cs => '<span class="hearrow">' + cs.map(c => '<button class="hear" data-hear="' + esc(c) + '" aria-label="' + lab(c) + '">' + h(c) + '</button>').join('') + '</span>';
+document.addEventListener('click', e => { const b = e.target.closest('[data-hear]'); if (b) hearChar(b.dataset.hear); });
 /* The scoring block in short rounds with a rest in between */
-async function roundsBlock(label, total, scored, gen, ew) {
-  const rl = S.test ? 10 : (S.round === '2' ? 120 : 60);
+function roundLen() { return S.test ? 10 : (S.round === '2' ? 120 : 60); }
+/* opt.rl: round length in seconds, opt.start: first round (when resuming), opt.track: remember completed rounds in sess.roundsDone */
+async function roundsBlock(label, total, scored, gen, ew, opt) {
+  opt = opt || {};
+  const rl = opt.rl || roundLen();
   const n = Math.max(1, Math.round(total / rl));
-  for (let r = 1; r <= n && !sess.abort; r++) {
+  for (let r = opt.start || 1; r <= n && !sess.abort; r++) {
+    const from = sess.perChar.length;
     sess.extra = (n - r) * rl;
     await groupsBlock(label + ' \u00b7 ' + tx('ronde ') + r + tx(' van ') + n, rl, scored, gen, ew);
-    if (r < n && !sess.abort) await roundPause(r, n);
+    if (sess.abort) break;
+    if (opt.track) sess.roundsDone = r;
+    if (r < n) await roundPause(r, n, from);
   }
   sess.extra = 0;
 }
-async function roundPause(r, n) {
+function missedSince(from) {
+  const m = []; sess.perChar.slice(from).forEach(([c, ok]) => { if (!ok && !m.includes(c)) m.push(c); });
+  return m;
+}
+async function roundPause(r, n, from) {
   clearInterval(blockTimer);
   $('sBlock').textContent = tx('Pauze'); $('sTime').textContent = ''; $('sBar').style.width = '100%'; $('sScored').textContent = '';
   showTotal(0);
@@ -168,6 +187,8 @@ async function roundPause(r, n) {
   $('brkNext').textContent = tx('Volgend: ronde ') + (r + 1);
   const pct = sess.tokens ? Math.round(100 * sess.correct / sess.tokens) : 0;
   $('brkInfo').textContent = tx('Tot nu toe ') + pct + tx('% juist. Neem even rust. Jij bepaalt wanneer de volgende ronde start.');
+  const miss = from === undefined ? [] : missedSince(from);
+  $('brkMiss').hidden = !miss.length; $('brkMissRow').innerHTML = miss.length ? hearBtns(miss).replace(/^<span class="hearrow">|<\/span>$/g, '') : '';
   panel('break'); setKb(false);
   Engine.tick(true);
   await waitClick('brkGo');
@@ -264,37 +285,48 @@ async function pauseBetween(done, next) {
   $('sBlock').textContent = tx('Pauze'); $('sTime').textContent = ''; $('sBar').style.width = '100%'; $('sScored').textContent = '';
   showTotal(0);
   $('brkDone').textContent = tx('Blok ') + (sess.bi - 1) + tx(' van ') + sess.bn + tx(' klaar');
-  $('brkNext').textContent = tx('Volgend: ') + next.label;
+  $('brkNext').textContent = tx('Volgend: ') + next.label; $('brkMiss').hidden = true;
   const mins = Math.max(1, Math.round(next.secs / 60));
   $('brkInfo').textContent = (next.scored ? tx('Dit blok telt mee.') : next.id === 'b4' ? tx('Dit is het luisterblok. Je hoeft niets te typen.') : tx('Dit blok telt niet mee.')) + ' ' + tx('Ongeveer ') + mins + ' min. ' + tx('Jij bepaalt wanneer het volgende blok start.');
   panel('break'); setKb(false);
   Engine.tick(true);
   await waitClick('brkGo');
 }
-async function runSession(exam) {
+/* how: 'resume' continues an interrupted session of today; anything else starts fresh
+   (and first closes an interrupted session, which then counts as it would have when stopped) */
+async function runSession(exam, how) {
   Engine.init();
   if (exam === true) return runExam();
-  const plan = makePlan(P, today(), S.test);
-  saveP();
-  const mode = S.mode;
-  const hold = (plan.suppressIntro || mode === 'luister') ? P.introQueue.slice() : [];
-  const news = hold.length ? [] : P.introQueue.slice();
-  const all = KOCH.slice(0, P.known).split('').filter(c => !hold.includes(c));
-  const oldChars = all.filter(c => !news.includes(c));
-  if (all.length < 2) { go('home'); return; }
-  const floor = P.fixedSpeed ? MIN_EWPM : AUTO_MIN;
-  const ew = Math.max(floor, Math.min(P.ewpm + plan.ewpmAdj, S.cwpm));
-  const warmEw = Math.max(floor, ew - 2);
-  plan.hadIntro = news.length > 0;
-  /* A new character: back to rounds of 1 minute, and 3 good sessions are needed again for 2 minutes */
-  let roundDown = false;
-  if (news.length && mode !== 'luister') { if (S.round === '2') roundDown = true; S.round = '1'; saveS(); P.rgood = 0; saveP(); }
-  sess = {roundDown, abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan, mode, release:null, paused:false, pausedMs:0, pauseAt:null, band:0, bandUsed:0};
+  const R = how === 'resume' ? resumeGet() : null;
+  if (!R) resumeDrop();
+  let C;
+  if (R) C = R.ctx;
+  else {
+    const plan = makePlan(P, today(), S.test);
+    saveP();
+    const mode = S.mode;
+    const hold = (plan.suppressIntro || mode === 'luister') ? P.introQueue.slice() : [];
+    const news = hold.length ? [] : P.introQueue.slice();
+    const all = KOCH.slice(0, P.known).split('').filter(c => !hold.includes(c));
+    if (all.length < 2) { go('home'); return; }
+    const floor = P.fixedSpeed ? MIN_EWPM : AUTO_MIN;
+    const ew = Math.max(floor, Math.min(P.ewpm + plan.ewpmAdj, S.cwpm));
+    plan.hadIntro = news.length > 0;
+    /* A new character: back to rounds of 1 minute, and 3 good sessions are needed again for 2 minutes */
+    let roundDown = false;
+    if (news.length && mode !== 'luister') { if (S.round === '2') roundDown = true; S.round = '1'; saveS(); P.rgood = 0; saveP(); }
+    const p4 = ph4();
+    C = {d:today(), plan, mode, news, all, oldChars:all.filter(c => !news.includes(c)), ew, warmEw:Math.max(floor, ew - 2), roundDown, p4,
+         lv:p4 ? (+S.band || 0) : 0, news4:p4 && !plan.suppressIntro && mode !== 'luister' ? (P.vocabQueue || []).slice() : [],
+         kvOld:p4 ? knownVocab(P) : [], rl:roundLen()};
+  }
+  const {plan, mode, news, all, oldChars, ew, warmEw, p4, lv, news4, kvOld} = C;
+  const A = R ? R.acc : null;
+  sess = {roundDown:C.roundDown, abort:false, tokens:A ? A.tokens : 0, correct:A ? A.correct : 0, perChar:A ? A.perChar : [], conf:A ? A.conf : [],
+          vres:A ? A.vres : [], minutes:A ? A.minutes : 0, listenAcc:A ? A.listen : 0, ewpm:ew, plan, mode, release:null, paused:false, pausedMs:0, pauseAt:null,
+          band:0, bandUsed:A ? A.bandUsed : 0, ctx:C, done:R ? R.done.slice() : [], roundsDone:R ? R.roundsDone : 0, introDone:R ? R.introDone : false,
+          counted:A ? {minutes:A.counted, listen:A.listenCounted} : {minutes:0, listen:0}};
   kbState.chars = all; renderKb(); panel('play');
-  const p4 = ph4();
-  const lv = p4 ? (+S.band || 0) : 0;
-  const news4 = p4 && !plan.suppressIntro && mode !== 'luister' ? (P.vocabQueue || []).slice() : [];
-  const kvOld = p4 ? knownVocab(P) : [];
   go('session'); $('stopBox').hidden = true; wake(S.wake);
   const len = +S.glen;
   const rnd = Math.random;
@@ -303,9 +335,12 @@ async function runSession(exam) {
   const gen = makeGen(all, words, meaningfulShare(P.known), rnd);
   const gen4 = p4 ? makeGen4(all, kvOld, rnd) : null;
   const lineGen = p4 ? makeLineGen(all, kvOld, rnd) : null;
+  const did = id => sess.done.includes(id);
+  const finished = id => { if (!sess.abort) sess.done.push(id); };
 
   /* Decide the blocks in advance, so the screen can show "Block x of y" and there is a break screen between blocks */
-  const b2Kind = mode === 'luister' ? '' : news4.length ? 'vocab' : news.length ? 'chars' : (oldChars.length >= 3 && P.sessions.length > 0) ? 'weak' : '';
+  if (C.b2Kind === undefined) C.b2Kind = mode === 'luister' ? '' : news4.length ? 'vocab' : news.length ? 'chars' : (oldChars.length >= 3 && P.sessions.length > 0) ? 'weak' : '';
+  const b2Kind = C.b2Kind;
   const introOn = b2Kind === 'vocab' || (b2Kind === 'chars' && !S.skipIntro);
   const b2Practice = b2Kind === 'vocab' || b2Kind === 'weak' || (b2Kind === 'chars' && oldChars.length > 0);
   const blocks = [];
@@ -317,8 +352,9 @@ async function runSession(exam) {
     blocks.push({id:'b3', scored:true, label:mode === 'papier' ? tx('Op papier') : p4 ? tx('Op de band') : tx('Groepen kopiëren'), secs:plan.b3});
     blocks.push({id:'b4', scored:false, label:tx('Luisteren'), secs:plan.b4});
   }
-  sess.blocks = blocks; sess.bn = blocks.length; sess.bi = 0;
+  sess.blocks = blocks; sess.bn = blocks.length; sess.bi = 0; C.blocks = blocks.map(b => ({id:b.id, label:b.label}));
   const begin = async id => {
+    if (did(id)) return false;
     const i = blocks.findIndex(x => x.id === id); sess.bi = i + 1;
     if (i > 0 && !sess.abort) await pauseBetween(blocks[i - 1], blocks[i]);
     return !sess.abort;
@@ -331,23 +367,26 @@ async function runSession(exam) {
     /* Block 1: warm-up with known characters, 2 WPM slower */
     if (oldChars.length >= 2 && await begin('warm')) {
       await groupsBlock(tx('Opwarmen'), plan.warm, false, () => ({tokens:randomGroup(P, oldChars, len, rnd)}), warmEw);
+      finished('warm');
     }
     /* Block 2: new character, new abbreviations (phase 4) or weak characters */
     if (!sess.abort && (introOn || b2Practice) && await begin('b2')) {
       if (b2Kind === 'vocab') {
-        for (const w of news4) { await introVocab(w, ew); if (sess.abort) break; }
+        if (!sess.introDone) for (const w of news4) { await introVocab(w, ew); if (sess.abort) break; }
         if (!sess.abort) {
+          sess.introDone = true;
           P.vocabQueue = (P.vocabQueue || []).filter(w => !news4.includes(w)); saveP();
           const pool = kvOld.slice();
           await groupsBlock(news4.length > 1 ? tx('Nieuwe afkortingen') : tx('Nieuwe afkorting'), plan.b2, false, () => {
             const w = rnd() < 0.6 || !pool.length ? news4[Math.floor(rnd() * news4.length)] : pickVocab(P, pool, rnd);
             return {tokens:[...w], word:w};
           }, ew);
-          kvOld.push(...news4);
+          if (!sess.abort) kvOld.push(...news4);
         }
       } else if (b2Kind === 'chars') {
-        if (introOn) for (const c of news) { await introChar(c, ew); if (sess.abort) break; }
+        if (introOn && !sess.introDone) for (const c of news) { await introChar(c, ew); if (sess.abort) break; }
         if (!sess.abort) {
+          sess.introDone = true;
           P.introQueue = P.introQueue.filter(c => !news.includes(c)); saveP();
           if (b2Practice) await groupsBlock(news.length > 1 ? tx('Nieuwe tekens') : tx('Nieuw teken'), plan.b2, false, () => ({tokens:introGroup(oldChars, news, +S.glen, rnd)}), ew);
         }
@@ -355,6 +394,7 @@ async function runSession(exam) {
         const weak = weakest(P, oldChars, 3);
         await groupsBlock(tx('Zwakke tekens'), plan.b2, false, () => ({tokens:randomGroup(P, weak, len, rnd)}), ew);
       }
+      finished('b2');
     }
     /* No introduction and no practice block needed (e.g. first session with only new characters): the character still counts as introduced */
     if (!sess.abort && b2Kind === 'chars' && P.introQueue.some(c => news.includes(c))) { P.introQueue = P.introQueue.filter(c => !news.includes(c)); saveP(); }
@@ -362,20 +402,75 @@ async function runSession(exam) {
     if (!sess.abort && await begin('b3')) {
       sess.band = lv; if (lv) sess.bandUsed = lv;
       if (mode === 'papier') await paperBlocks(plan.b3, l => gen(l, true), ew);
-      else if (p4) await roundsBlock(tx('Op de band'), plan.b3, true, gen4, ew);
-      else await roundsBlock(tx('Groepen kopiëren'), plan.b3, true, () => gen(len, false), ew);
+      else if (p4) await roundsBlock(tx('Op de band'), plan.b3, true, gen4, ew, {rl:C.rl, start:sess.roundsDone + 1, track:true});
+      else await roundsBlock(tx('Groepen kopiëren'), plan.b3, true, () => gen(len, false), ew, {rl:C.rl, start:sess.roundsDone + 1, track:true});
+      finished('b3');
     }
   }
   /* Block 4: listening, 3 minutes, part of every session. Phase 4: pieces of QSOs with band conditions. */
   if (mode !== 'luister' && !sess.abort && await begin('b4')) {
     sess.band = lv;
     await listenSession(plan.b4, p4 ? lineGen : () => gen(len, false), ew, true);
+    finished('b4');
   }
   sess.band = 0;
   clearInterval(blockTimer);
   wake(false);
   Engine.stop(true);
   endSession();
+}
+
+/* ---------- Interrupted session: continue later the same day ---------- */
+function resumeGet() { return P.resume && P.resume.ctx && P.resume.ctx.d === today() ? P.resume : null; }
+/* minutes already added to the day (and listening time) when the session was interrupted, so they are not counted twice */
+function uncount(d, c) {
+  if (!c) return;
+  if (c.minutes) P.days[d] = Math.max(0, (P.days[d] || 0) - c.minutes);
+  if (c.listen) P.listenMin = Math.max(0, (P.listenMin || 0) - c.listen);
+}
+function resumeSave() {
+  const d = sess.ctx.d, addM = sess.minutes - sess.counted.minutes, addL = (sess.listenAcc || 0) - sess.counted.listen;
+  P.days[d] = (P.days[d] || 0) + addM; P.listenMin = (P.listenMin || 0) + addL;
+  if (sess.tokens > 0 || sess.minutes > 0.5) P.lastDate = d;
+  P.resume = {ctx:sess.ctx, done:sess.done, roundsDone:sess.roundsDone, introDone:sess.introDone,
+              acc:{tokens:sess.tokens, correct:sess.correct, perChar:sess.perChar, conf:sess.conf, vres:sess.vres || [], minutes:sess.minutes,
+                   listen:sess.listenAcc || 0, bandUsed:sess.bandUsed || 0, counted:sess.minutes, listenCounted:sess.listenAcc || 0}};
+  saveP();
+  const r = P.resume.acc; sess = null;
+  lastExam = false; lastFree = false; lastResume = true;
+  go('result');
+  const pct = r.tokens ? Math.round(100 * r.correct / r.tokens) : 0;
+  $('rMeter').hidden = !r.tokens; $('rMeterLbl').hidden = !r.tokens;
+  $('rTitle').textContent = tx('Sessie onderbroken');
+  $('rScore').textContent = r.tokens ? pct + '%' : '-';
+  $('rFill').style.width = pct + '%';
+  const li = [tx('Je kan vandaag verdergaan waar je stopte. Wat je al deed, telt dan mee voor deze sessie.'), resumeWhere(P.resume)];
+  if (r.tokens) li.push(r.correct + tx(' van ') + r.tokens + tx(' tekens juist tot nu toe.'));
+  li.push(tx('Geoefend: ') + fmt(r.minutes, 0) + tx(' minuten') + '.');
+  $('rList').innerHTML = li.map(t => '<li>' + t + '</li>').join('');
+  $('rAgain').textContent = tx('Verder waar je stopte');
+}
+/* Where the session continues, in words */
+function resumeWhere(R) {
+  const bl = R.ctx.blocks || [], i = bl.findIndex(b => !R.done.includes(b.id));
+  if (i < 0) return '';
+  let t = tx('Je gaat verder met blok ') + (i + 1) + tx(' van ') + bl.length + ': ' + bl[i].label;
+  if (bl[i].id === 'b3' && R.ctx.mode !== 'papier') {
+    const n = Math.max(1, Math.round(R.ctx.plan.b3 / R.ctx.rl));
+    t += ', ' + tx('ronde ') + Math.min(n, R.roundsDone + 1) + tx(' van ') + n;
+  }
+  return t + '.';
+}
+/* Close an interrupted session that will not be continued: it counts as it would have when stopped */
+function resumeDrop() {
+  const R = P.resume; if (!R) return;
+  P.resume = null;
+  if (R.ctx && R.ctx.plan && R.acc) {
+    const a = R.acc, d = R.ctx.d;
+    uncount(d, {minutes:a.counted, listen:a.listenCounted});
+    finishSession(P, {tokens:a.tokens, correct:a.correct, perChar:a.perChar, conf:a.conf, vres:a.vres, minutes:a.minutes, ewpm:R.ctx.ew, listen:a.listen, band:a.bandUsed}, R.ctx.plan, d, S.cwpm);
+  }
+  saveP();
 }
 
 /* ---------- Free practice: review and maintenance, does not change level or speed ---------- */
@@ -389,6 +484,7 @@ function freeWords(all) {
 }
 function freeAvail(k, all) {
   if (all.length < 2) return false;
+  if (k === 'own') return true;
   if (k === 'words') { const f = freeWords(all); return f.vocab.length + f.words.length >= 5 || f.calls; }
   if (k === 'qso') return allKnown();
   if (k === 'weak') return all.length >= 4;
@@ -399,7 +495,7 @@ function freeEw(sp) {
   const e = sp === 'full' ? S.cwpm : sp === 'up' ? P.ewpm + 3 : P.ewpm;
   return Math.max(floor, Math.min(e, S.cwpm));
 }
-const FREE_INFO = {mix:'Groepen met alle tekens die je kent, ook cijfers, leestekens en prosigns. Je typt wat je hoort.',
+const FREE_INFO = {own:'Je kiest zelf welke gekende tekens, hoeveel blokjes en hoeveel groepjes. Je typt wat je hoort.', mix:'Groepen met alle tekens die je kent, ook cijfers, leestekens en prosigns. Je typt wat je hoort.',
   words:'Afkortingen, Q-codes, woorden en roepnamen, zoals op de band. Je typt wat je hoort; daarna zie je de betekenis.',
   qso:"Stukjes QSO met bandcondities. Je luistert, zegt het in je hoofd en ziet daarna de tekst. Je hoeft niets te typen.",
   weak:'Je zwakste tekens komen vaker, gemengd met de rest. Je typt wat je hoort.'};
@@ -413,6 +509,9 @@ function renderFree() {
   document.querySelectorAll('#frKind .chip').forEach(b => { b.disabled = !freeAvail(b.dataset.v, all); b.setAttribute('aria-pressed', String(b.dataset.v === S.frKind)); });
   document.querySelectorAll('#frDur .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === String(S.frDur))));
   document.querySelectorAll('#frSpeed .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === S.frSpeed)));
+  $('frOwn').hidden = S.frKind !== 'own'; $('frDurWrap').hidden = S.frKind === 'own';
+  $('frStart').disabled = false;
+  if (S.frKind === 'own') renderOwn(all);
   let info = tx(S.frKind === 'mix' && P.known <= N1 ? 'Groepen met alle tekens die je kent. Je typt wat je hoort.' : FREE_INFO[S.frKind]);
   if (!allKnown()) info += ' ' + tx("QSO's worden beschikbaar zodra alle 44 tekens gekend zijn.");
   $('frInfo').textContent = info;
@@ -422,11 +521,73 @@ function renderFree() {
   if (b.disabled) return; S[id] = b.dataset.v; saveS(); renderFree();
 })));
 $('frStart').addEventListener('click', () => runFree());
+/* Own series: the user picks known characters, number of blocks, groups per block and group length */
+function ownCfg(all) {
+  const o = Object.assign({chars:all.slice(-6), rounds:3, groups:10, len:5}, S.frOwn || {});
+  o.chars = o.chars.filter(c => all.includes(c));
+  return o;
+}
+function renderOwn(all) {
+  const o = ownCfg(all), g = $('owGrid'); g.innerHTML = '';
+  all.forEach(c => {
+    const b = document.createElement('button');
+    b.innerHTML = h(c); b.setAttribute('aria-label', lab(c)); b.setAttribute('aria-pressed', String(o.chars.includes(c)));
+    b.className = o.chars.includes(c) ? 'on' : '';
+    b.addEventListener('click', () => { const x = ownCfg(all); x.chars = x.chars.includes(c) ? x.chars.filter(y => y !== c) : x.chars.concat(c); S.frOwn = x; saveS(); renderFree(); });
+    g.appendChild(b);
+  });
+  $('owRounds').value = o.rounds; $('owGroups').value = o.groups; $('owLen').value = o.len;
+  const n = o.rounds * o.groups;
+  $('owInfo').textContent = o.chars.length < 2 ? tx('Kies minstens 2 tekens.') : o.chars.length + tx(' tekens gekozen. ') + n + tx(' groepjes in totaal.');
+  $('frStart').disabled = o.chars.length < 2;
+}
+const owSet = f => { const all = freeAll(), o = ownCfg(all); f(o, all); S.frOwn = o; saveS(); renderFree(); };
+$('owAll').addEventListener('click', () => owSet((o, all) => { o.chars = all.slice(); }));
+$('owNone').addEventListener('click', () => owSet(o => { o.chars = []; }));
+$('owWeak').addEventListener('click', () => owSet((o, all) => { o.chars = weakest(P, all, 5); }));
+['owRounds', 'owGroups', 'owLen'].forEach(id => $(id).addEventListener('change', e => owSet(o => { o[{owRounds:'rounds', owGroups:'groups', owLen:'len'}[id]] = +e.target.value; })));
+/* A block of a fixed number of groups (instead of a fixed time) */
+async function groupsCount(label, n, gen, ew) {
+  $('sBlock').textContent = label;
+  $('sScored').textContent = '';
+  showPlay(true); setKb(false); renderBoxes(0, []);
+  $('expected').textContent = ''; $('meaning').textContent = ''; $('sTotal').textContent = '';
+  status(label); await sleep(1400);
+  if (sess.abort) return;
+  clearInterval(blockTimer);
+  const t0 = performance.now();
+  for (let i = 0; i < n && !sess.abort; i++) {
+    $('sTime').textContent = (i + 1) + '/' + n; $('sBar').style.width = (i / n * 100) + '%';
+    await runGroup(gen(), ew, true);
+  }
+  $('sBar').style.width = '100%';
+  sess.minutes += (performance.now() - t0) / 60000;
+}
+async function runOwn(all) {
+  const o = ownCfg(all);
+  if (o.chars.length < 2) { go('home'); return; }
+  const ew = freeEw(S.frSpeed), rnd = Math.random;
+  const groups = S.test ? Math.min(o.groups, 3) : o.groups;
+  sess = {free:'own', abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan:{}, mode:'vrij',
+          release:null, paused:false, pausedMs:0, pauseAt:null, band:0, bandUsed:0};
+  kbState.chars = o.chars.slice(); renderKb(); panel('play');
+  go('session'); $('stopBox').hidden = true; wake(S.wake);
+  const gen = () => ({tokens:randomGroup(P, o.chars, o.len, rnd)});
+  for (let r = 1; r <= o.rounds && !sess.abort; r++) {
+    const from = sess.perChar.length;
+    await groupsCount(tx('Eigen reeks') + ' \u00b7 ' + tx('blokje ') + r + tx(' van ') + o.rounds, groups, gen, ew);
+    if (sess.abort) break;
+    if (r < o.rounds) await roundPause(r, o.rounds, from);
+  }
+  clearInterval(blockTimer); wake(false); Engine.stop(true);
+  endSession();
+}
 async function runFree() {
   Engine.init();
   const all = freeAll();
   if (all.length < 2) { go('home'); return; }
   const kind = freeAvail(S.frKind, all) ? S.frKind : 'mix';
+  if (kind === 'own') return runOwn(all);
   const secs = S.test ? 30 : (+S.frDur || 10) * 60;
   const ew = freeEw(S.frSpeed);
   const rnd = Math.random, len = +S.glen;
@@ -474,7 +635,7 @@ function endFree() {
   if (r.tokens > 0 || r.minutes > 0.5) P.lastDate = d;
   saveP();
   const kind = sess.free; sess = null;
-  lastExam = false; lastFree = true;
+  lastExam = false; lastFree = true; lastResume = false; $('rAgain').textContent = tx('Nog een keer');
   go('result');
   const lis = kind === 'qso';
   $('rMeter').hidden = lis || !r.tokens; $('rMeterLbl').hidden = lis || !r.tokens;
@@ -487,7 +648,7 @@ function endFree() {
   else li.push(tx('Dat telt mee voor je luistertijd en je reeks. Totale luistertijd: ') + listenTxt() + '.');
   const miss = {}; r.perChar.forEach(([c, ok]) => { if (!ok) miss[c] = (miss[c] || 0) + 1; });
   const top = Object.keys(miss).sort((a, b) => miss[b] - miss[a]).slice(0, 3);
-  if (top.length) li.push(tx('Meeste fouten bij: ') + top.map(lab).join(', ') + tx('. Die komen vaker terug.'));
+  if (top.length) li.push(tx('Meeste fouten bij: ') + top.map(lab).join(', ') + tx('. Die komen vaker terug.') + ' ' + tx('Tik om te horen:') + hearBtns(top));
   li.push(tx('Vrij oefenen verandert je niveau en snelheid niet.'));
   li.push(tx('Geoefend: ') + fmt(r.minutes, 0) + tx(' minuten') + (r.minutes < 10 && (P.days[d] || 0) < 10 ? tx(' (een dag telt vanaf 10 minuten)') : '') + '.');
   $('rList').innerHTML = li.map(t => '<li>' + t + '</li>').join('');
@@ -707,8 +868,11 @@ function endSession() {
     const out = finishExam(P, r, today(), sess.plan.minTokens);
     saveP(); showExamResult(r, out, sess.plan); sess = null; return;
   }
+  if (sess.abort && sess.ctx && sess.mode !== 'luister' && sess.ctx.blocks && sess.done.length < sess.ctx.blocks.length) { resumeSave(); return; }
   const r = {tokens:sess.tokens, correct:sess.correct, perChar:sess.perChar, conf:sess.conf, vres:sess.vres || [], minutes:sess.minutes, ewpm:sess.ewpm, listen:sess.listenAcc || 0, band:sess.bandUsed || 0};
   const before = {ewpm:P.ewpm, known:P.known, okRun:P.okRun};
+  uncount(today(), sess.counted);
+  P.resume = null;
   const out = finishSession(P, r, sess.plan, today(), S.cwpm);
   if (out.valid && sess.mode !== 'luister') {
     P.rgood = out.score >= 0.95 ? (P.rgood || 0) + 1 : 0;
@@ -720,7 +884,7 @@ function endSession() {
   sess = null;
 }
 function showResult(r, out, before, plan, mode) {
-  lastExam = false; lastFree = false;
+  lastExam = false; lastFree = false; lastResume = false; $('rAgain').textContent = tx('Nog een sessie');
   go('result');
   const lis = mode === 'luister';
   $('rMeter').hidden = lis; $('rMeterLbl').hidden = lis;
@@ -751,14 +915,14 @@ function showResult(r, out, before, plan, mode) {
   const top = Object.keys(miss).sort((a, b) => miss[b] - miss[a]).slice(0, 3);
   if (r.band) li.push(tx('Bandcondities: ') + tx(BAND_NAMES[r.band]).toLowerCase() + tx('. Aanpassen kan bij Instellingen.'));
   if (ph4() && !lis) li.push(tx('Vergeet het echte luisteren niet: noteer het in je Logboek.'));
-  if (top.length) li.push(tx('Meeste fouten bij: ') + top.map(lab).join(', ') + tx('. Die komen vaker terug.'));
+  if (top.length) li.push(tx('Meeste fouten bij: ') + top.map(lab).join(', ') + tx('. Die komen vaker terug.') + ' ' + tx('Tik om te horen:') + hearBtns(top));
   li.push(tx('Geoefend: ') + fmt(r.minutes, 0) + tx(' minuten') + (r.minutes < 10 && (P.days[today()] || 0) < 10 ? tx(' (een dag telt vanaf 10 minuten)') : '') + '.');
   $('rList').innerHTML = li.map(t => '<li>' + t + '</li>').join('');
 }
 
-let lastExam = false, lastFree = false;
+let lastExam = false, lastFree = false, lastResume = false;
 function showExamResult(r, out, plan) {
-  lastExam = true; lastFree = false;
+  lastExam = true; lastFree = false; lastResume = false; $('rAgain').textContent = tx('Nog een sessie');
   go('result');
   $('rMeter').hidden = false; $('rMeterLbl').hidden = false;
   const pct = Math.round(out.score * 100);
@@ -793,7 +957,8 @@ $('stopYes').addEventListener('click', () => {
   if (pendingPlay) { const r = pendingPlay; pendingPlay = null; r('stopped'); }
 });
 async function afterAbortWatcher() {}
-$('start').addEventListener('click', () => { runSession(); });
+$('start').addEventListener('click', () => { runSession(false, resumeGet() ? 'resume' : ''); });
+$('resumeNew').addEventListener('click', () => { runSession(false, 'fresh'); });
 $('rHome').addEventListener('click', () => go('home'));
-$('rAgain').addEventListener('click', () => { if (lastFree) runFree(); else runSession(lastExam); });
+$('rAgain').addEventListener('click', () => { if (lastFree) runFree(); else if (lastResume) runSession(false, 'resume'); else runSession(lastExam); });
 

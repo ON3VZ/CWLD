@@ -14,7 +14,8 @@ function renderProgress() {
     const d = document.createElement('div');
     const locked = i >= P.known;
     const a = acc(P, c), n = P.stats[c] ? P.stats[c].h.length : 0;
-    d.className = 'cell' + (locked ? ' lock' : a === null ? '' : a >= 0.9 ? ' ok' : a >= 0.85 ? ' mid' : ' low');
+    d.className = 'cell' + (locked ? ' lock' : a === null ? '' : a >= 0.9 ? ' ok' : a >= 0.85 ? ' mid' : ' low') + (locked ? '' : ' tap');
+    if (!locked) { d.dataset.hear = c; d.setAttribute('role', 'button'); d.setAttribute('aria-label', tx('Beluister ') + lab(c)); }
     d.innerHTML = '<b>' + h(c) + '</b><span>' + (locked || a === null ? '&nbsp;' : Math.round(a * 100) + '%') + '</span>';
     (i < N1 ? el : el2).appendChild(d);
   });

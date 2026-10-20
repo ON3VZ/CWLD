@@ -4,7 +4,7 @@
 /* ============================================================
    LANGUAGE: translate the interface (Dutch text is the key)
    ============================================================ */
-const APP_VERSION = '1.9';
+const APP_VERSION = '2.0';
 let LANG = 'nl';
 function tx(t) { if (LANG === 'nl' || t == null) return t; const d = TR[LANG]; return d && d[t] != null ? d[t] : t; }
 const mean = w => tx(MEANING[w] || '');

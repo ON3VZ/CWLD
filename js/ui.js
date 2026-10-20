@@ -57,6 +57,16 @@ function renderHome() {
   renderModes();
   renderExam();
   $('startHint').textContent = S.test ? tx('Testmodus staat aan') : S.mode === 'luister' ? tx('Ongeveer 12 minuten luisteren') : tx('Ongeveer 15 minuten');
+  /* An interrupted session of an earlier day is closed; one of today can be continued */
+  if (P.resume && !resumeGet()) resumeDrop();
+  const R = resumeGet();
+  $('resumeBox').hidden = !R; $('resumeNew').hidden = !R;
+  $('start').textContent = R ? tx('Verder waar je stopte') : tx('Start sessie');
+  if (R) {
+    const pct = R.acc.tokens ? Math.round(100 * R.acc.correct / R.acc.tokens) : null;
+    $('resumeBox').textContent = tx('Je sessie van vandaag is onderbroken. ') + resumeWhere(R) + (pct !== null ? ' ' + tx('Tot nu toe ') + pct + tx('% juist.') : '');
+    $('startHint').textContent = '';
+  }
 }
 function fmtD(d) { return d.slice(8) + '/' + d.slice(5, 7) + '/' + d.slice(0, 4); }
 function examOpen() { return P.known >= KOCH.length && !P.introQueue.length; }
