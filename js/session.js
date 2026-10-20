@@ -135,7 +135,8 @@ async function runGroup(g, ew, scored) {
       if (g.word && VSET.has(g.word) && sess.vres) sess.vres.push([g.word, all]);
     }
   }
-  await sleep(all ? 800 : 1700);
+  if (all) await sleep(800);
+  else await afterError(g, ew);
 }
 
 async function groupsBlock(label, secs, scored, gen, ew) {
@@ -158,6 +159,37 @@ function hearChar(c) {
 }
 const hearBtns = cs => '<span class="hearrow">' + cs.map(c => '<button class="hear" data-hear="' + esc(c) + '" aria-label="' + lab(c) + '">' + h(c) + '</button>').join('') + '</span>';
 document.addEventListener('click', e => { const b = e.target.closest('[data-hear]'); if (b) hearChar(b.dataset.hear); });
+/* Keep the audio output awake while waiting on a screen, so the next tones do not start in a hurry */
+async function awake(fn) {
+  const had = Engine.alive;
+  Engine.keepAlive(true);
+  try { return await fn(); } finally { if (!had) Engine.keepAlive(false); }
+}
+/* After a wrong group: the answer stays visible for the chosen time, with "Hear again".
+   Hearing it again plays the group with the answer on screen; then the user decides when to go on. */
+function waitFor(ids, ms) {
+  return new Promise(res => {
+    const els = ids.map(id => $(id)), hs = [];
+    let tm = null;
+    const done = v => { clearTimeout(tm); els.forEach((el, i) => el.removeEventListener('click', hs[i])); if (sess) sess.release = null; res(v); };
+    els.forEach((el, i) => { hs[i] = () => done(ids[i]); el.addEventListener('click', hs[i]); });
+    if (ms) tm = setTimeout(() => done(null), ms);
+    sess.release = () => done('stop');
+  });
+}
+async function afterError(g, ew) {
+  $('errRow').hidden = false; $('errGo').hidden = true; $('errAgain').disabled = false;
+  let r = await waitFor(['errAgain'], Math.round((+S.errWait || 1.7) * 1000));
+  while (r === 'errAgain' && !sess.abort) {
+    $('errAgain').disabled = true; $('errGo').hidden = true;
+    status(tx('Luister nog eens, met het antwoord erbij'));
+    if (await playP([g.tokens], ew) === 'stopped' || sess.abort) break;
+    $('errAgain').disabled = false; $('errGo').hidden = false;
+    status(tx('Klaar? Kies Verder.'));
+    r = await waitFor(['errAgain', 'errGo'], 0);
+  }
+  $('errRow').hidden = true;
+}
 /* The scoring block in short rounds with a rest in between */
 function roundLen() { return S.test ? 10 : (S.round === '2' ? 120 : 60); }
 /* opt.rl: round length in seconds, opt.start: first round (when resuming), opt.track: remember completed rounds in sess.roundsDone */
@@ -191,7 +223,7 @@ async function roundPause(r, n, from) {
   $('brkMiss').hidden = !miss.length; $('brkMissRow').innerHTML = miss.length ? hearBtns(miss).replace(/^<span class="hearrow">|<\/span>$/g, '') : '';
   panel('break'); setKb(false);
   Engine.tick(true);
-  await waitClick('brkGo');
+  await awake(() => waitClick('brkGo'));
 }
 async function isleep(ms) { const t0 = performance.now(); while (performance.now() - t0 < ms && sess && !sess.abort && !sess.skipI) await sleep(Math.min(100, ms)); }
 async function introChar(c, ew) {
@@ -217,6 +249,7 @@ async function introChar(c, ew) {
 async function introEnd(again, ew) {
   $('introText').textContent = tx('Klaar? Kies Verder om te oefenen, of hoor het nog eens.');
   $('introNext').hidden = false; $('introSkip').hidden = true;
+  const had = Engine.alive; Engine.keepAlive(true);
   for (;;) {
     const r = await new Promise(res => {
       const a = $('introAgain'), g = $('introGo');
@@ -231,6 +264,7 @@ async function introEnd(again, ew) {
     $('introAgain').disabled = false; $('introGo').disabled = false;
     if (pr === 'stopped' || sess.abort) break;
   }
+  if (!had) Engine.keepAlive(false);
   $('introNext').hidden = true; $('introSkip').hidden = false;
 }
 
@@ -290,7 +324,7 @@ async function pauseBetween(done, next) {
   $('brkInfo').textContent = (next.scored ? tx('Dit blok telt mee.') : next.id === 'b4' ? tx('Dit is het luisterblok. Je hoeft niets te typen.') : tx('Dit blok telt niet mee.')) + ' ' + tx('Ongeveer ') + mins + ' min. ' + tx('Jij bepaalt wanneer het volgende blok start.');
   panel('break'); setKb(false);
   Engine.tick(true);
-  await waitClick('brkGo');
+  await awake(() => waitClick('brkGo'));
 }
 /* how: 'resume' continues an interrupted session of today; anything else starts fresh
    (and first closes an interrupted session, which then counts as it would have when stopped) */

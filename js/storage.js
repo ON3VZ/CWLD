@@ -6,7 +6,7 @@
    ============================================================ */
 const $ = id => document.getElementById(id);
 const LS_P = 'cwt-progress-v1', LS_S = 'cwt-settings-v1';
-const DEF_S = {sv:2, freq:600, vol:70, cwpm:20, ramp:5, glen:5, wake:false, test:false, mode:'onderweg', pgroups:10, plen:5, pcheck:'snel', speech:true, live:true, dd:true, skipIntro:false, round:'1', band:1};
+const DEF_S = {sv:2, freq:600, vol:70, cwpm:20, ramp:5, glen:5, wake:false, test:false, mode:'onderweg', pgroups:10, plen:5, pcheck:'snel', speech:true, live:true, dd:true, skipIntro:false, round:'1', errWait:'1.7', band:1};
 let S = {...DEF_S}, P = newProgress();
 function load() {
   let raw = null;

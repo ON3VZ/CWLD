@@ -131,6 +131,7 @@ function renderSettings() {
   $('cwpm').value = S.cwpm; $('o-cwpm').textContent = S.cwpm + ' WPM';
   $('cwarn').className = S.cwpm < 20 ? 'warnc' : '';
   $('ramp').value = S.ramp; $('o-ramp').textContent = S.ramp + ' ms';
+  $('errWait').value = String(S.errWait || '1.7'); [...$('errWait').options].forEach(o => { o.textContent = (+o.value).toLocaleString(S.lang === 'en' ? 'en' : S.lang === 'fr' ? 'fr' : 'nl') + ' s'; });
   $('glen').value = S.glen; $('round').value = S.round || '1'; $('wake').checked = S.wake; $('test').checked = S.test; $('speech').checked = S.speech; $('live').checked = S.live; $('dd').checked = S.dd; $('skipIntro').checked = !!S.skipIntro;
   $('fixed').checked = P.fixedSpeed;
   const ew = Math.min(P.ewpm, S.cwpm);
@@ -154,6 +155,7 @@ function renderSettings() {
   renderSettings(); Engine.apply();
 }));
 $('round').addEventListener('change', e => { S.round = e.target.value; saveS(); });
+$('errWait').addEventListener('change', e => { S.errWait = e.target.value; saveS(); });
 $('glen').addEventListener('change', e => { S.glen = +e.target.value; saveS(); });
 $('order').addEventListener('change', e => {
   switchOrder(P, e.target.value); saveP();

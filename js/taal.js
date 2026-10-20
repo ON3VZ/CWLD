@@ -530,7 +530,11 @@ const TR = {
 " groepjes in totaal.": " groupes au total.",
 "blokje ": "bloc ",
 "Beluister ": "Écouter ",
-"Je kiest zelf welke gekende tekens, hoeveel blokjes en hoeveel groepjes. Je typt wat je hoort.": "Tu choisis toi-même quels signes connus, combien de blocs et combien de groupes. Tu tapes ce que tu entends."
+"Je kiest zelf welke gekende tekens, hoeveel blokjes en hoeveel groepjes. Je typt wat je hoort.": "Tu choisis toi-même quels signes connus, combien de blocs et combien de groupes. Tu tapes ce que tu entends.",
+"Wachttijd na een fout": "Attente après une faute",
+"Zo lang blijft het juiste antwoord staan, met de knop Nog eens horen.": "Durée pendant laquelle la bonne réponse reste affichée, avec le bouton Réécouter.",
+"Luister nog eens, met het antwoord erbij": "Réécoute, avec la réponse affichée",
+"Klaar? Kies Verder.": "Prêt ? Choisis Continuer."
 },
 "en": {
 "REEKS": "STREAK",
@@ -1055,7 +1059,11 @@ const TR = {
 " groepjes in totaal.": " groups in total.",
 "blokje ": "block ",
 "Beluister ": "Listen to ",
-"Je kiest zelf welke gekende tekens, hoeveel blokjes en hoeveel groepjes. Je typt wat je hoort.": "You choose which known characters, how many blocks and how many groups. You type what you hear."
+"Je kiest zelf welke gekende tekens, hoeveel blokjes en hoeveel groepjes. Je typt wat je hoort.": "You choose which known characters, how many blocks and how many groups. You type what you hear.",
+"Wachttijd na een fout": "Wait after a mistake",
+"Zo lang blijft het juiste antwoord staan, met de knop Nog eens horen.": "How long the right answer stays on screen, with the Hear it again button.",
+"Luister nog eens, met het antwoord erbij": "Listen again, with the answer shown",
+"Klaar? Kies Verder.": "Ready? Choose Continue."
 }
 };
 const SAYL = {"fr": {"0": "zéro", "1": "un", "2": "deux", "3": "trois", "4": "quatre", "5": "cinq", "6": "six", "7": "sept", "8": "huit", "9": "neuf", ".": "point", ",": "virgule", "?": "point d'interrogation", "/": "barre oblique", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}, "en": {"0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", ".": "full stop", ",": "comma", "?": "question mark", "/": "slash", "=": "B T", "+": "A R", "(": "K N", "%": "S K"}};

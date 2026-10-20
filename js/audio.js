@@ -11,7 +11,7 @@ function timing(c, s) {
   return {u, dit:u, dah:3 * u, tc:3 * ta / 19, tw:7 * ta / 19};
 }
 const Engine = (() => {
-  let ac = null, osc, key, sig, vol, fx, current = null;
+  let ac = null, osc, key, sig, vol, fx, current = null, lastEnd = -1;
   let nG, bp, qOsc, qKey, qG, lfo, lfoG;   /* band conditions: noise, interfering station, fading */
   function init() {
     if (ac) { if (ac.state !== 'running') ac.resume(); return ac; }
@@ -96,7 +96,9 @@ const Engine = (() => {
     const r0 = opts.ramp / 1000;
     const J = () => B && B.fist ? 1 + (Math.random() * 2 - 1) * B.fist : 1;
     const UP = curve(true), DN = curve(false), g = key.gain;
-    const t0 = now + (B ? 0.7 : 0.15);
+    /* After silence (a pause, a new round) give the device and earphones half a second to wake up */
+    const cold = lastEnd < 0 || now - lastEnd > 1.5;
+    const t0 = now + (B ? 0.7 : cold ? 0.5 : 0.15);
     let t = t0;
     const marks = [];
     groups.forEach((grp, gi) => {
@@ -120,13 +122,14 @@ const Engine = (() => {
     if (B) bandOn(B, f, now, t0, t); else bandOff(now);
     const src = ac.createBufferSource(); src.buffer = ac.createBuffer(1, 1, ac.sampleRate);
     src.connect(ac.destination);
-    current = {src, onEnd, t0, end:t, marks};
+    current = {src, onEnd, t0, end:t, marks}; lastEnd = t;
     src.onended = () => { if (current && current.src === src) { const c = current; current = null; c.onEnd({stopped:false}); } };
     src.start(t);
   }
   function stop(silent) {
     if (!ac) return;
     const t = ac.currentTime, g = key.gain;
+    lastEnd = Math.min(lastEnd, t);
     g.cancelScheduledValues(0);
     g.setValueAtTime(g.value, t);
     g.linearRampToValueAtTime(0, t + 0.006);
@@ -166,15 +169,27 @@ const Engine = (() => {
     if (on && !ka) { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = 40; g.gain.value = 0.003; o.connect(g).connect(ac.destination); o.start(); ka = {o, g}; }
     if (!on && ka) { try { ka.o.stop(); } catch (e) {} ka = null; }
   }
-  return {init, apply, play, stop, tick, pos, keepAlive, get ac() { return ac; }};
+  /* Wait until the audio clock really runs. A suspended clock that restarts later would play
+     everything scheduled in the meantime in a hurry. */
+  async function ready() {
+    init();
+    if (ac.state !== 'running') { lastEnd = -1; try { await ac.resume(); } catch (e) {} }
+    const t = ac.currentTime;
+    for (let i = 0; i < 25 && ac.currentTime <= t; i++) await new Promise(r => setTimeout(r, 20));
+  }
+  return {init, ready, apply, play, stop, tick, pos, keepAlive, get alive() { return !!ka; }, get ac() { return ac; }};
 })();
 let pendingPlay = null;
 function playP(groups, ew) {
   return new Promise(res => {
     pendingPlay = res;
-    const B = sess && sess.band ? bandFor(sess.band, Math.random) : null;
-    const freq = B ? Math.max(400, Math.min(1000, S.freq + B.pitch)) : 0;
-    Engine.play(groups, {c:(sess && sess.c) || S.cwpm, s:ew, ramp:S.ramp, band:B, freq}, r => { pendingPlay = null; res(r.stopped ? 'stopped' : 'ok'); });
+    Engine.ready().then(() => {
+      if (pendingPlay !== res) return;                       /* stopped or skipped while waiting */
+      if (sess && sess.abort) { pendingPlay = null; res('stopped'); return; }
+      const B = sess && sess.band ? bandFor(sess.band, Math.random) : null;
+      const freq = B ? Math.max(400, Math.min(1000, S.freq + B.pitch)) : 0;
+      Engine.play(groups, {c:(sess && sess.c) || S.cwpm, s:ew, ramp:S.ramp, band:B, freq}, r => { pendingPlay = null; res(r.stopped ? 'stopped' : 'ok'); });
+    });
   });
 }
 

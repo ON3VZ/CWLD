@@ -267,6 +267,7 @@
         <div class="boxes" id="boxes" aria-label="Jouw invoer"></div>
         <div class="expected" id="expected" aria-live="polite"></div>
         <div class="meaning" id="meaning"></div>
+        <div class="row" id="errRow" hidden style="justify-content:center;margin:0 0 10px"><button class="btn ghost" id="errAgain">Nog eens horen</button><button class="btn go" id="errGo" hidden>Verder</button></div>
         <div class="kb" id="kb"></div>
         <div class="kb2">
           <button class="key" id="kMis" title="Teken gemist">Mis</button>
@@ -427,6 +428,7 @@
         <div class="field"><label for="ramp">Flank <output id="o-ramp"></output></label><input type="range" id="ramp" min="2" max="10" step="1"></div>
         <div class="field"><label for="order">Leervolgorde</label><select id="order"><option value="koch">Koch (standaard)</option><option value="fam">Per familie</option></select><small>Koch: een teken per keer erbij, zodra je 90% haalt. Per familie: telkens 4 tot 10 tekens die bij elkaar horen, een andere aanpak om het alfabet snel te kennen.</small><small id="orderMsg" class="ok"></small></div>
         <div class="field"><label for="round">Oefenrondes</label><select id="round"><option value="1">8 rondes van 1 minuut</option><option value="2">4 rondes van 2 minuten</option></select></div>
+        <div class="field"><label for="errWait">Wachttijd na een fout</label><select id="errWait"><option value="1.7">1,7 s</option><option value="2">2 s</option><option value="3">3 s</option><option value="3.5">3,5 s</option></select><small>Zo lang blijft het juiste antwoord staan, met de knop Nog eens horen.</small></div>
         <div class="field"><label for="glen">Groeplengte</label><select id="glen"><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select></div>
         <label class="check"><input type="checkbox" id="wake"> Scherm aan houden tijdens een sessie</label>
         <label class="check"><input type="checkbox" id="dd"> Di-dah tonen bij een nieuw teken (om mee te zeggen)</label>
