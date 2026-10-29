@@ -132,7 +132,7 @@ function renderSettings() {
   $('cwarn').className = S.cwpm < 20 ? 'warnc' : '';
   $('ramp').value = S.ramp; $('o-ramp').textContent = S.ramp + ' ms';
   $('errWait').value = String(S.errWait || '1.7'); [...$('errWait').options].forEach(o => { o.textContent = (+o.value).toLocaleString(S.lang === 'en' ? 'en' : S.lang === 'fr' ? 'fr' : 'nl') + ' s'; });
-  $('glen').value = S.glen; $('round').value = S.round || '1'; $('wake').checked = S.wake; $('test').checked = S.test; $('speech').checked = S.speech; $('live').checked = S.live; $('dd').checked = S.dd; $('skipIntro').checked = !!S.skipIntro;
+  $('relisten').checked = S.relisten !== false; $('glen').value = S.glen; $('round').value = S.round || '1'; $('wake').checked = S.wake; $('test').checked = S.test; $('speech').checked = S.speech; $('live').checked = S.live; $('dd').checked = S.dd; $('skipIntro').checked = !!S.skipIntro;
   $('fixed').checked = P.fixedSpeed;
   const ew = Math.min(P.ewpm, S.cwpm);
   $('ewpm').value = ew; $('ewpm').disabled = !P.fixedSpeed; $('o-ewpm').textContent = ew + ' WPM' + (P.fixedSpeed ? '' : tx(' (automatisch)'));
@@ -166,6 +166,7 @@ $('wake').addEventListener('change', e => { S.wake = e.target.checked; saveS(); 
 $('speech').addEventListener('change', e => { S.speech = e.target.checked; saveS(); });
 $('live').addEventListener('change', e => { S.live = e.target.checked; saveS(); });
 $('dd').addEventListener('change', e => { S.dd = e.target.checked; saveS(); });
+$('relisten').addEventListener('change', e => { S.relisten = e.target.checked; saveS(); });
 $('skipIntro').addEventListener('change', e => { S.skipIntro = e.target.checked; saveS(); });
 $('testSpeech').addEventListener('click', () => { speak(['K', 'M', 'R']); });
 $('test').addEventListener('change', e => { S.test = e.target.checked; saveS(); renderSettings(); renderHeader(); });
@@ -309,7 +310,7 @@ function knApplied(msg) {
 async function runPlacement(n) {
   Engine.init();
   const all = KOCH.slice(0, n).split('');
-  const ew = Math.max(AUTO_MIN, Math.min(P.ewpm, S.cwpm));
+  const ew = Math.max(P.fixedSpeed ? MIN_EWPM : AUTO_MIN, Math.min(P.ewpm, S.cwpm));
   const secs = S.test ? 30 : 120;
   sess = {abort:false, tokens:0, correct:0, perChar:[], conf:[], vres:[], minutes:0, ewpm:ew, plan:{}, mode:'proef', band:0, release:null, paused:false, pausedMs:0, pauseAt:null, bn:1, bi:1, blocks:[{secs}]};
   kbState.chars = all; renderKb(); panel('play'); go('session'); $('stopBox').hidden = true; wake(S.wake);

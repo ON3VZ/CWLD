@@ -97,8 +97,12 @@ async function runGroup(g, ew, scored) {
   const n = g.tokens.length;
   $('expected').textContent = ''; $('meaning').textContent = '';
   renderBoxes(n, []);
-  let replayed = false, a;
+  let replayed = false, nrep = 0, a;
+  /* One free listen-again per group (setting, default on; never in the final test); a further one counts as wrong */
+  const free = (S.relisten !== false && !sess.exam) ? 1 : 0;
+  $('kAgain').hidden = !!sess.exam;
   for (;;) {
+    $('kAgain').textContent = tx(nrep < free ? 'Nog eens horen' : 'Nog eens horen (telt als fout)');
     let ap = null;
     if (S.live) {
       /* Tap along: the keyboard is active while the group is playing */
@@ -116,7 +120,7 @@ async function runGroup(g, ew, scored) {
     }
     a = await ap;
     if (a.abort || sess.abort) return;
-    if (a.replay) { replayed = true; continue; }
+    if (a.replay) { nrep++; if (nrep > free) replayed = true; continue; }
     break;
   }
   const res = align(g.tokens, a.typed);
@@ -233,17 +237,17 @@ async function introChar(c, ew) {
     $('introBig').innerHTML = h(c);
     $('introText').textContent = tx('Nieuw teken: ') + sylL(c).toUpperCase() + tx('. Luister en zeg het hardop mee.');
     await isleep(1800); if (sess.abort || sess.skipI) return;
-    if (await playP([[c], [c], [c], [c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
+    if (await playP([[c, c, c, c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
     await isleep(1000); if (sess.abort || sess.skipI) return;
   }
   $('introBig').textContent = ''; $('introText').textContent = tx('Nu zonder hulp. Luister naar het ritme.');
   await isleep(1200); if (sess.abort || sess.skipI) return;
-  if (await playP([[c], [c], [c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
+  if (await playP([[c, c, c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
   $('introBig').innerHTML = h(c);
   $('introText').textContent = (INFO[c] ? tx('Dit is ') + tx(INFO[c]) : tx('Dit is de ') + c) + tx('. Zeg het ritme hardop mee.');
   await isleep(1000); if (sess.abort || sess.skipI) return;
-  if (await playP([[c], [c], [c], [c], [c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
-  await introEnd([[c], [c], [c]], ew);
+  if (await playP([[c, c, c, c, c]], ew) === 'stopped' || sess.abort || sess.skipI) return;
+  await introEnd([[c, c, c]], ew);
 }
 /* End of an introduction: the user decides when to go on, and can hear it again first */
 async function introEnd(again, ew) {
