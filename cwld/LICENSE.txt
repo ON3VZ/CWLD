@@ -1,0 +1,36 @@
+CWLD: learn to receive Morse code
+Copyright (c) 2026 ON3VZ (https://on3vz.github.io/CWLD/)
+
+LICENSE: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+(CC BY-NC-SA 4.0)
+
+Full legal text:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+Human-readable summary:
+  https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+IN SHORT (the legal text prevails)
+
+You may:
+  - use, copy and share CWLD;
+  - adapt CWLD and build on it, for example for inspiration.
+
+Under these terms:
+  1. Attribution. You give clear credit as "CWLD by ON3VZ" with the link
+     https://on3vz.github.io/CWLD/ , you link to this license and you
+     indicate whether you made changes. You may not do this in a way that
+     suggests ON3VZ endorses you or your use.
+  2. NonCommercial. You may not use CWLD or an adaptation of it to make money
+     or for commercial purposes.
+  3. ShareAlike. If you share an adaptation, you do so under the same license
+     (CC BY-NC-SA 4.0), with the same attribution.
+
+So you may not publish CWLD or parts of it under your own name.
+
+EXCEPTIONS
+  - The fonts in the fonts folder have their own license (SIL Open Font
+    License). It is in the LICENSE-*.txt files in that folder and remains in force.
+  - The background images in the img folder fall under the same license as
+    the rest of CWLD.
+
+Questions, or permission for anything outside this license: contact ON3VZ.
